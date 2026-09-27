@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import subprocess
+import tomllib
+from dataclasses import dataclass
 from pathlib import Path
 
 GIT_ENV = {
@@ -32,3 +34,15 @@ def write_files(repo: Path, files: dict[str, str]) -> None:
 def commit_all(repo: Path, message: str = "update") -> None:
     git(repo, "add", "-A")
     git(repo, "commit", "-q", "-m", message)
+
+
+@dataclass(frozen=True)
+class SecretCase:
+    kind: str
+    value: str
+    must_match: bool
+
+
+def load_secret_cases() -> list[SecretCase]:
+    data = tomllib.loads((FIXTURES / "secrets.toml").read_text(encoding="utf-8"))
+    return [SecretCase(c["kind"], "".join(c["parts"]), bool(c["must_match"])) for c in data["case"]]
