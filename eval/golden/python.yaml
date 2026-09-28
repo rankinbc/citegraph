@@ -25,6 +25,9 @@
 # - find_path: the expected chain is the unique shortest call path in the verified graph; each hop is a
 #   verified caller pair.
 # - ci: true on questions 1, 4, 7, ... of each tool, in file order.
+# - Exception added after the first eval run: py-find_path-flask-2 is also ci: true. Both find_path
+#   questions the rule flagged fail, so the CI subset scored find_path 0.0 and the gate could not
+#   detect a find_path regression; flask-2 is the first find_path question that passes, in file order.
 
 # what_calls: flask
 - id: py-what_calls-flask-1
@@ -396,6 +399,7 @@
     - flask:flask.sansio.scaffold.Scaffold.patch
     - flask:flask.sansio.scaffold.Scaffold._method_route
     - flask:flask.sansio.scaffold.Scaffold.route
+  ci: true
   note: "patch calls only _method_route, which calls self.route"
 - id: py-find_path-flask-3
   tool: find_path

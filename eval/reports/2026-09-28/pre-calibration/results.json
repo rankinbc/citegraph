@@ -16,7 +16,7 @@
       },
       "baseline": [
         "flask:flask.cli.FlaskGroup._load_plugin_commands",
-        "flask:flask.config.Config",
+        "flask:flask.config.Config.from_file",
         "flask:flask.json.load",
         "flask:tests.test_json.test_json_dump_to_file",
         "httpx:tests.models.test_whatwg"
@@ -26,7 +26,7 @@
         "recall": 1.0,
         "f1": 0.33333333333333337
       },
-      "latency_ms": 114.10599999362603
+      "latency_ms": 113.77080000238493
     },
     {
       "id": "py-what_calls-flask-2",
@@ -43,14 +43,14 @@
         "f1": 1.0
       },
       "baseline": [
-        "flask:flask.cli.AppGroup.decorator"
+        "flask:flask.cli.AppGroup.command.decorator"
       ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
       },
-      "latency_ms": 0.5057999806012958
+      "latency_ms": 0.4642000130843371
     },
     {
       "id": "py-what_calls-flask-3",
@@ -101,11 +101,11 @@
       },
       "baseline": [
         "flask:examples.tutorial.flaskr.create_app",
-        "flask:flask.app.Flask",
-        "flask:flask.sansio.blueprints.Blueprint",
+        "flask:flask.app.Flask.__init__",
+        "flask:flask.sansio.blueprints.Blueprint.add_url_rule",
         "flask:flask.sansio.blueprints.Blueprint.register",
-        "flask:flask.sansio.blueprints.BlueprintSetupState",
-        "flask:flask.sansio.scaffold.Scaffold",
+        "flask:flask.sansio.blueprints.BlueprintSetupState.add_url_rule",
+        "flask:flask.sansio.scaffold.Scaffold.add_url_rule",
         "flask:flask.sansio.scaffold.Scaffold.endpoint",
         "flask:flask.sansio.scaffold.Scaffold.route.decorator",
         "flask:flask.views.MethodView",
@@ -144,7 +144,7 @@
         "recall": 1.0,
         "f1": 0.05128205128205127
       },
-      "latency_ms": 3.040100011276081
+      "latency_ms": 2.3609000199940056
     },
     {
       "id": "py-what_calls-flask-4",
@@ -184,7 +184,7 @@
         "recall": 1.0,
         "f1": 0.6666666666666666
       },
-      "latency_ms": 0.8080999832600355
+      "latency_ms": 1.2694000033661723
     },
     {
       "id": "py-what_calls-flask-5",
@@ -201,14 +201,14 @@
         "f1": 1.0
       },
       "baseline": [
-        "flask:flask.sansio.app.App"
+        "flask:flask.sansio.app.App.__init__"
       ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
       },
-      "latency_ms": 0.40779999108053744
+      "latency_ms": 0.6006000039633363
     },
     {
       "id": "py-what_calls-flask-6",
@@ -230,7 +230,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 1.0146000131499022
+      "latency_ms": 0.49390000640414655
     },
     {
       "id": "py-what_calls-flask-7",
@@ -261,7 +261,7 @@
         "f1": 0.625
       },
       "baseline": [
-        "flask:flask.config.Config",
+        "flask:flask.config.Config.from_prefixed_env",
         "flask:flask.json.loads",
         "flask:flask.json.provider.DefaultJSONProvider.loads",
         "flask:flask.json.provider.JSONProvider.load",
@@ -275,7 +275,7 @@
         "flask:tests.test_json.test_jsonify_uuid_types",
         "flask:tests.test_json_tag.test_custom_tag",
         "flask:tests.test_json_tag.test_dump_load_unchanged",
-        "httpx:httpx._main",
+        "httpx:httpx._main.validate_json",
         "httpx:httpx._models.Response.json",
         "httpx:tests.models.test_requests.test_request_async_streaming_content_picklable",
         "httpx:tests.models.test_requests.test_request_generator_content_picklable",
@@ -288,7 +288,7 @@
         "recall": 1.0,
         "f1": 0.3846153846153846
       },
-      "latency_ms": 0.7375999994110316
+      "latency_ms": 1.3402999902609736
     },
     {
       "id": "py-what_calls-flask-8",
@@ -323,7 +323,7 @@
         "flask:flask.json.provider.JSONProvider.dump",
         "flask:flask.json.provider.JSONProvider.response",
         "flask:flask.json.tag.TaggedJSONSerializer.dumps",
-        "flask:flask.sessions.SecureCookieSessionInterface",
+        "flask:flask.sessions.SecureCookieSessionInterface.save_session",
         "flask:flask.testing.EnvironBuilder.json_dumps",
         "flask:tests.test_basic.test_json_dump_dataclass",
         "flask:tests.test_json.test_html_method",
@@ -355,7 +355,7 @@
         "recall": 1.0,
         "f1": 0.3157894736842105
       },
-      "latency_ms": 0.5562999867834151
+      "latency_ms": 1.205600012326613
     },
     {
       "id": "py-what_calls-flask-9",
@@ -379,7 +379,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 0.8554999949410558
+      "latency_ms": 1.2901999871246517
     },
     {
       "id": "py-what_calls-flask-10",
@@ -408,7 +408,7 @@
         "f1": 0.0
       },
       "baseline": [
-        "flask:flask.helpers.streamed_response",
+        "flask:flask.helpers.stream_with_context",
         "flask:tests.test_basic.test_make_response_with_response_instance",
         "flask:tests.test_basic.test_max_cookie_size",
         "flask:tests.test_basic.test_max_cookie_size.index",
@@ -424,10 +424,10 @@
         "flask:tests.test_views.test_implicit_head.Index.get",
         "flask:tests.type_check.typing_app_decorators.after_async",
         "flask:tests.type_check.typing_app_decorators.after_sync",
-        "httpx:httpx._models.Response",
-        "httpx:httpx._transports.asgi.ASGITransport",
-        "httpx:httpx._transports.default.AsyncHTTPTransport",
-        "httpx:httpx._transports.default.HTTPTransport",
+        "httpx:httpx._models.Response.__init__",
+        "httpx:httpx._transports.asgi.ASGITransport.handle_async_request",
+        "httpx:httpx._transports.default.AsyncHTTPTransport.handle_async_request",
+        "httpx:httpx._transports.default.HTTPTransport.handle_request",
         "httpx:httpx._transports.wsgi.WSGITransport.handle_request",
         "httpx:tests.client.test_async_client.hello_world",
         "httpx:tests.client.test_async_client.mounted",
@@ -541,7 +541,6 @@
         "httpx:tests.test_content.test_response_invalid_argument",
         "httpx:tests.test_content.test_response_iterator_content",
         "httpx:tests.test_content.test_separators_for_compact_json",
-        "httpx:tests.test_decoders",
         "httpx:tests.test_decoders.test_brotli",
         "httpx:tests.test_decoders.test_decoders_empty_cases",
         "httpx:tests.test_decoders.test_decoding_errors",
@@ -555,6 +554,7 @@
         "httpx:tests.test_decoders.test_multi",
         "httpx:tests.test_decoders.test_multi_with_identity",
         "httpx:tests.test_decoders.test_streaming",
+        "httpx:tests.test_decoders.test_streaming_text_decoder",
         "httpx:tests.test_decoders.test_text_decoder_empty_cases",
         "httpx:tests.test_decoders.test_text_decoder_known_encoding",
         "httpx:tests.test_decoders.test_text_decoder_with_autodetect",
@@ -574,7 +574,7 @@
         "recall": 1.0,
         "f1": 0.17142857142857143
       },
-      "latency_ms": 0.25270000332966447
+      "latency_ms": 0.4963999963365495
     },
     {
       "id": "py-what_calls-httpx-1",
@@ -595,8 +595,10 @@
         "flask:examples.tutorial.flaskr.db.close_db",
         "flask:examples.tutorial.tests.conftest.app",
         "flask:flask.app.Flask.test_request_context",
-        "flask:flask.helpers.generator",
-        "flask:flask.testing.FlaskClient",
+        "flask:flask.helpers.stream_with_context.generator",
+        "flask:flask.testing.FlaskClient.__exit__",
+        "flask:flask.testing.FlaskClient._request_from_builder_args",
+        "flask:flask.testing.FlaskClient.open",
         "flask:tests.test_basic.test_static_files",
         "flask:tests.test_basic.test_static_folder_with_pathlib_path",
         "flask:tests.test_basic.test_static_route_with_host_matching",
@@ -612,12 +614,15 @@
         "flask:tests.test_helpers.TestStreaming.test_async_view",
         "flask:tests.test_testing.test_client_pop_all_preserved",
         "httpx:httpx._client.BoundSyncStream.close",
-        "httpx:httpx._client.Client",
+        "httpx:httpx._client.Client._send_handling_auth",
+        "httpx:httpx._client.Client._send_handling_redirects",
         "httpx:httpx._client.Client.close",
+        "httpx:httpx._client.Client.send",
+        "httpx:httpx._client.Client.stream",
         "httpx:httpx._client.ClientState",
         "httpx:httpx._models.Response.close",
         "httpx:httpx._models.Response.iter_raw",
-        "httpx:httpx._transports.base.BaseTransport",
+        "httpx:httpx._transports.base.BaseTransport.__exit__",
         "httpx:httpx._transports.default.HTTPTransport.close",
         "httpx:httpx._transports.default.ResponseStream.close",
         "httpx:tests.client.test_client.test_client_closed_state_using_implicit_open",
@@ -626,11 +631,11 @@
         "httpx:tests.models.test_responses.test_close_on_async"
       ],
       "baseline_score": {
-        "precision": 0.03125,
-        "recall": 0.5,
-        "f1": 0.058823529411764705
+        "precision": 0.05405405405405406,
+        "recall": 1.0,
+        "f1": 0.10256410256410257
       },
-      "latency_ms": 108.41630000504665
+      "latency_ms": 105.24340000119992
     },
     {
       "id": "py-what_calls-httpx-2",
@@ -647,14 +652,14 @@
         "f1": 1.0
       },
       "baseline": [
-        "httpx:httpx._client.BaseClient"
+        "httpx:httpx._client.BaseClient.build_request"
       ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
       },
-      "latency_ms": 0.7719999994151294
+      "latency_ms": 0.7544000109191984
     },
     {
       "id": "py-what_calls-httpx-3",
@@ -678,7 +683,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 0.531300000147894
+      "latency_ms": 0.6257999921217561
     },
     {
       "id": "py-what_calls-httpx-4",
@@ -697,14 +702,15 @@
         "f1": 1.0
       },
       "baseline": [
-        "httpx:httpx._content"
+        "httpx:httpx._content.encode_request",
+        "httpx:httpx._content.encode_response"
       ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
       },
-      "latency_ms": 0.8673999982420355
+      "latency_ms": 1.0310999932698905
     },
     {
       "id": "py-what_calls-httpx-5",
@@ -723,14 +729,16 @@
         "f1": 1.0
       },
       "baseline": [
-        "httpx:httpx._auth.Auth"
+        "httpx:httpx._auth.Auth",
+        "httpx:httpx._auth.Auth.async_auth_flow",
+        "httpx:httpx._auth.Auth.sync_auth_flow"
       ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "f1": 0.8
       },
-      "latency_ms": 0.5433000042103231
+      "latency_ms": 1.2972999829798937
     },
     {
       "id": "py-what_calls-httpx-6",
@@ -747,14 +755,14 @@
         "f1": 1.0
       },
       "baseline": [
-        "httpx:httpx._content"
+        "httpx:httpx._content.encode_response"
       ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
       },
-      "latency_ms": 0.39250002009794116
+      "latency_ms": 0.5726999952457845
     },
     {
       "id": "py-what_calls-httpx-7",
@@ -780,7 +788,7 @@
         "recall": 1.0,
         "f1": 0.5
       },
-      "latency_ms": 0.4123999970033765
+      "latency_ms": 0.5970000056549907
     },
     {
       "id": "py-what_calls-httpx-8",
@@ -807,7 +815,7 @@
         "recall": 1.0,
         "f1": 0.5
       },
-      "latency_ms": 0.74819999281317
+      "latency_ms": 0.8688000089023262
     },
     {
       "id": "py-what_calls-httpx-9",
@@ -826,15 +834,15 @@
         "f1": 1.0
       },
       "baseline": [
-        "httpx:httpx._auth.DigestAuth",
+        "httpx:httpx._auth.DigestAuth._parse_challenge",
         "httpx:httpx._auth.DigestAuth._resolve_qop"
       ],
       "baseline_score": {
-        "precision": 0.5,
-        "recall": 0.5,
-        "f1": 0.5
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
       },
-      "latency_ms": 0.6930000090505928
+      "latency_ms": 0.7984999974723905
     },
     {
       "id": "py-what_calls-httpx-10",
@@ -851,14 +859,14 @@
         "f1": 1.0
       },
       "baseline": [
-        "httpx:httpx._client.BaseClient"
+        "httpx:httpx._client.BaseClient._build_request_auth"
       ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
       },
-      "latency_ms": 0.6410999922081828
+      "latency_ms": 0.6351000047288835
     },
     {
       "id": "py-what_does_it_call-flask-1",
@@ -874,13 +882,36 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "baseline": [],
+      "baseline": [
+        "flask:flask.ctx._AppCtxGlobals.get",
+        "flask:flask.sansio.scaffold.Scaffold._get_exc_class_and_code",
+        "flask:flask.sansio.scaffold.Scaffold.get",
+        "flask:tests.test_async.AsyncMethodView.get",
+        "flask:tests.test_basic.test_session_vary_cookie.get",
+        "flask:tests.test_helpers.TestUrlFor.test_url_with_method.MyView.get",
+        "flask:tests.test_reqctx.test_session_dynamic_cookie_name.get",
+        "flask:tests.test_views.test_explicit_head.Index.get",
+        "flask:tests.test_views.test_implicit_head.Index.get",
+        "flask:tests.test_views.test_method_based_view.Index.get",
+        "flask:tests.test_views.test_methods_var_inheritance.ChildView.get",
+        "flask:tests.test_views.test_multiple_inheritance.GetView.get",
+        "flask:tests.test_views.test_remove_method_from_parent.GetView.get",
+        "flask:tests.test_views.test_view_inheritance.Index.get",
+        "flask:tests.test_views.test_view_patching.Index.get",
+        "flask:tests.test_views.test_view_patching.Other.get",
+        "httpx:httpx._api.get",
+        "httpx:httpx._client.AsyncClient.get",
+        "httpx:httpx._client.Client.get",
+        "httpx:httpx._models.Cookies.get",
+        "httpx:httpx._models.Headers.get",
+        "httpx:httpx._urls.QueryParams.get"
+      ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 0.045454545454545456,
+        "recall": 1.0,
+        "f1": 0.08695652173913045
       },
-      "latency_ms": 1.1119999981019646
+      "latency_ms": 0.9674000029917806
     },
     {
       "id": "py-what_does_it_call-flask-2",
@@ -908,7 +939,7 @@
         "recall": 1.0,
         "f1": 0.5
       },
-      "latency_ms": 0.6050999800208956
+      "latency_ms": 0.5950000195298344
     },
     {
       "id": "py-what_does_it_call-flask-3",
@@ -938,7 +969,7 @@
         "recall": 1.0,
         "f1": 0.25
       },
-      "latency_ms": 0.2500000118743628
+      "latency_ms": 0.24900000425986946
     },
     {
       "id": "py-what_does_it_call-flask-4",
@@ -963,13 +994,123 @@
         "recall": 0.75,
         "f1": 0.5454545454545454
       },
-      "baseline": [],
+      "baseline": [
+        "flask:examples.tutorial.tests.conftest.AuthActions.__init__",
+        "flask:flask.app.Flask.__init__",
+        "flask:flask.app.Flask.send_static_file",
+        "flask:flask.blueprints.Blueprint.__init__",
+        "flask:flask.blueprints.Blueprint.send_static_file",
+        "flask:flask.cli.AppGroup",
+        "flask:flask.cli.CertParamType.__init__",
+        "flask:flask.cli.FlaskGroup.__init__",
+        "flask:flask.cli.ScriptInfo.__init__",
+        "flask:flask.config.Config.__init__",
+        "flask:flask.config.ConfigAttribute.__init__",
+        "flask:flask.ctx.AppContext.__init__",
+        "flask:flask.ctx.RequestContext.__init__",
+        "flask:flask.debughelpers.DebugFilesKeyError.__init__",
+        "flask:flask.debughelpers.FormDataRoutingRedirect.__init__",
+        "flask:flask.json.provider.JSONProvider.__init__",
+        "flask:flask.json.tag.JSONTag.__init__",
+        "flask:flask.json.tag.TaggedJSONSerializer.__init__",
+        "flask:flask.sansio.app.App.__init__",
+        "flask:flask.sansio.app.App.add_url_rule",
+        "flask:flask.sansio.blueprints.Blueprint.__init__",
+        "flask:flask.sansio.blueprints.Blueprint.add_url_rule",
+        "flask:flask.sansio.blueprints.BlueprintSetupState.__init__",
+        "flask:flask.sansio.blueprints.BlueprintSetupState.add_url_rule",
+        "flask:flask.sansio.scaffold.Scaffold.__init__",
+        "flask:flask.sansio.scaffold.Scaffold.add_url_rule",
+        "flask:flask.sessions.SecureCookieSession.__init__",
+        "flask:flask.templating.DispatchingJinjaLoader.__init__",
+        "flask:flask.templating.Environment.__init__",
+        "flask:flask.testing.EnvironBuilder.__init__",
+        "flask:flask.testing.FlaskCliRunner.__init__",
+        "flask:flask.testing.FlaskClient.__init__",
+        "flask:tests.test_appctx.test_custom_app_ctx_globals_class.CustomRequestGlobals.__init__",
+        "flask:tests.test_basic.test_multi_route_class_views.View.__init__",
+        "flask:tests.test_basic.test_session_using_application_root.PrefixPathMiddleware.__init__",
+        "flask:tests.test_helpers.FakePath.__init__",
+        "flask:tests.test_helpers.PyBytesIO.__init__",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context_and_custom_close.Wrapper.__init__",
+        "flask:tests.test_json.FixedOffset.__init__",
+        "flask:tests.test_json.test_json_customization.X.__init__",
+        "flask:tests.test_json_tag.test_custom_tag.Foo.__init__",
+        "flask:tests.test_views.test_init_once.CountInit.__init__",
+        "flask:tests.type_check.typing_route.RenderTemplateView.__init__",
+        "httpx:httpx._auth.BasicAuth.__init__",
+        "httpx:httpx._auth.DigestAuth.__init__",
+        "httpx:httpx._auth.FunctionAuth.__init__",
+        "httpx:httpx._auth.NetRCAuth.__init__",
+        "httpx:httpx._client.AsyncClient.__init__",
+        "httpx:httpx._client.BaseClient.__init__",
+        "httpx:httpx._client.BoundAsyncStream.__init__",
+        "httpx:httpx._client.BoundSyncStream.__init__",
+        "httpx:httpx._client.Client.__init__",
+        "httpx:httpx._config.Limits.__init__",
+        "httpx:httpx._config.Proxy.__init__",
+        "httpx:httpx._config.Timeout.__init__",
+        "httpx:httpx._content.AsyncIteratorByteStream.__init__",
+        "httpx:httpx._content.ByteStream.__init__",
+        "httpx:httpx._content.IteratorByteStream.__init__",
+        "httpx:httpx._decoders.BrotliDecoder.__init__",
+        "httpx:httpx._decoders.ByteChunker.__init__",
+        "httpx:httpx._decoders.DeflateDecoder.__init__",
+        "httpx:httpx._decoders.GZipDecoder.__init__",
+        "httpx:httpx._decoders.LineDecoder.__init__",
+        "httpx:httpx._decoders.MultiDecoder.__init__",
+        "httpx:httpx._decoders.TextChunker.__init__",
+        "httpx:httpx._decoders.TextDecoder.__init__",
+        "httpx:httpx._decoders.ZStandardDecoder.__init__",
+        "httpx:httpx._exceptions.CookieConflict.__init__",
+        "httpx:httpx._exceptions.HTTPError.__init__",
+        "httpx:httpx._exceptions.HTTPStatusError.__init__",
+        "httpx:httpx._exceptions.InvalidURL.__init__",
+        "httpx:httpx._exceptions.RequestError.__init__",
+        "httpx:httpx._exceptions.RequestNotRead.__init__",
+        "httpx:httpx._exceptions.ResponseNotRead.__init__",
+        "httpx:httpx._exceptions.StreamClosed.__init__",
+        "httpx:httpx._exceptions.StreamConsumed.__init__",
+        "httpx:httpx._exceptions.StreamError.__init__",
+        "httpx:httpx._models.Cookies._CookieCompatRequest.__init__",
+        "httpx:httpx._models.Cookies._CookieCompatResponse.__init__",
+        "httpx:httpx._models.Cookies.__init__",
+        "httpx:httpx._models.Headers.__init__",
+        "httpx:httpx._models.Request.__init__",
+        "httpx:httpx._models.Response.__init__",
+        "httpx:httpx._multipart.DataField.__init__",
+        "httpx:httpx._multipart.FileField.__init__",
+        "httpx:httpx._multipart.MultipartStream.__init__",
+        "httpx:httpx._transports.asgi.ASGIResponseStream.__init__",
+        "httpx:httpx._transports.asgi.ASGITransport.__init__",
+        "httpx:httpx._transports.default.AsyncHTTPTransport.__init__",
+        "httpx:httpx._transports.default.AsyncResponseStream.__init__",
+        "httpx:httpx._transports.default.HTTPTransport.__init__",
+        "httpx:httpx._transports.default.ResponseStream.__init__",
+        "httpx:httpx._transports.mock.MockTransport.__init__",
+        "httpx:httpx._transports.wsgi.WSGIByteStream.__init__",
+        "httpx:httpx._transports.wsgi.WSGITransport.__init__",
+        "httpx:httpx._urls.QueryParams.__init__",
+        "httpx:httpx._urls.URL.__init__",
+        "httpx:httpx._utils.URLPattern.__init__",
+        "httpx:tests.client.test_async_client.test_context_managed_transport.Transport.__init__",
+        "httpx:tests.client.test_async_client.test_context_managed_transport_and_mount.Transport.__init__",
+        "httpx:tests.client.test_auth.App.__init__",
+        "httpx:tests.client.test_auth.DigestApp.__init__",
+        "httpx:tests.client.test_auth.RepeatAuth.__init__",
+        "httpx:tests.client.test_auth.ResponseBodyAuth.__init__",
+        "httpx:tests.client.test_auth.SyncOrAsyncAuth.__init__",
+        "httpx:tests.client.test_client.test_context_managed_transport.Transport.__init__",
+        "httpx:tests.client.test_client.test_context_managed_transport_and_mount.Transport.__init__",
+        "httpx:tests.test_content.test_async_bytesio_content.AsyncBytesIO.__init__",
+        "httpx:tests.test_multipart.test_multipart_encode_non_seekable_filelike.IteratorIO.__init__"
+      ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 0.03669724770642202,
+        "recall": 1.0,
+        "f1": 0.07079646017699115
       },
-      "latency_ms": 0.5170000076759607
+      "latency_ms": 0.4946999833919108
     },
     {
       "id": "py-what_does_it_call-flask-5",
@@ -993,7 +1134,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 0.2232999831903726
+      "latency_ms": 0.2621999883558601
     },
     {
       "id": "py-what_does_it_call-flask-6",
@@ -1032,7 +1173,7 @@
         "recall": 1.0,
         "f1": 0.125
       },
-      "latency_ms": 0.31099998159334064
+      "latency_ms": 0.31450000824406743
     },
     {
       "id": "py-what_does_it_call-flask-7",
@@ -1052,13 +1193,26 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "baseline": [],
+      "baseline": [
+        "flask:examples.tutorial.tests.conftest.app",
+        "flask:flask.cli.ScriptInfo.load_app",
+        "flask:flask.cli.run_command.app",
+        "flask:flask.cli.show_server_banner",
+        "flask:flask.helpers.get_debug_flag",
+        "flask:tests.conftest.app",
+        "flask:tests.test_cli.TestRoutes.app",
+        "flask:tests.test_user_error_handler.TestGenericHandlers.app",
+        "httpx:tests.client.test_event_hooks.app",
+        "httpx:tests.conftest.app",
+        "httpx:tests.test_wsgi.test_wsgi_server_port.app",
+        "httpx:tests.test_wsgi.test_wsgi_server_protocol.app"
+      ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 0.25,
+        "recall": 1.0,
+        "f1": 0.4
       },
-      "latency_ms": 0.3144000074826181
+      "latency_ms": 0.31269999453797936
     },
     {
       "id": "py-what_does_it_call-flask-8",
@@ -1082,7 +1236,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 0.2099999983329326
+      "latency_ms": 0.21520000882446766
     },
     {
       "id": "py-what_does_it_call-flask-9",
@@ -1115,7 +1269,7 @@
         "recall": 1.0,
         "f1": 0.25
       },
-      "latency_ms": 0.41969999438151717
+      "latency_ms": 0.4529000143520534
     },
     {
       "id": "py-what_does_it_call-flask-10",
@@ -1131,13 +1285,15 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "baseline": [],
+      "baseline": [
+        "flask:flask.templating._stream"
+      ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
       },
-      "latency_ms": 0.23780000628903508
+      "latency_ms": 0.21240001660771668
     },
     {
       "id": "py-what_does_it_call-httpx-1",
@@ -1163,7 +1319,7 @@
         "recall": 1.0,
         "f1": 0.5
       },
-      "latency_ms": 0.2848999865818769
+      "latency_ms": 0.287600007141009
     },
     {
       "id": "py-what_does_it_call-httpx-2",
@@ -1179,13 +1335,19 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "baseline": [],
+      "baseline": [
+        "httpx:httpx._api.request",
+        "httpx:httpx._client.AsyncClient.request",
+        "httpx:httpx._client.Client.request",
+        "httpx:httpx._exceptions.HTTPError.request",
+        "httpx:httpx._models.Response.request"
+      ],
       "baseline_score": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1": 0.0
+        "precision": 0.2,
+        "recall": 1.0,
+        "f1": 0.33333333333333337
       },
-      "latency_ms": 0.288200011709705
+      "latency_ms": 0.2243000199086964
     },
     {
       "id": "py-what_does_it_call-httpx-3",
@@ -1217,7 +1379,7 @@
         "recall": 1.0,
         "f1": 0.4
       },
-      "latency_ms": 0.3003000165335834
+      "latency_ms": 0.3328000020701438
     },
     {
       "id": "py-what_does_it_call-httpx-4",
@@ -1241,7 +1403,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 0.9071000094991177
+      "latency_ms": 0.2690000110305846
     },
     {
       "id": "py-what_does_it_call-httpx-5",
@@ -1265,7 +1427,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 0.285400019492954
+      "latency_ms": 0.24500000290572643
     },
     {
       "id": "py-what_does_it_call-httpx-6",
@@ -1291,7 +1453,7 @@
         "recall": 1.0,
         "f1": 0.5
       },
-      "latency_ms": 0.25069998810067773
+      "latency_ms": 0.2525000018067658
     },
     {
       "id": "py-what_does_it_call-httpx-7",
@@ -1340,7 +1502,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 0.2555999963078648
+      "latency_ms": 0.2631000243127346
     },
     {
       "id": "py-what_does_it_call-httpx-9",
@@ -1364,7 +1526,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 0.33939999411813915
+      "latency_ms": 0.2749999985098839
     },
     {
       "id": "py-what_does_it_call-httpx-10",
@@ -1390,7 +1552,7 @@
         "recall": 1.0,
         "f1": 0.5
       },
-      "latency_ms": 0.3176000027451664
+      "latency_ms": 0.20939999376423657
     },
     {
       "id": "py-find_config_key-flask-1",
@@ -1425,7 +1587,7 @@
         "recall": 1.0,
         "f1": 0.8333333333333333
       },
-      "latency_ms": 0.6855999818071723
+      "latency_ms": 0.7828000234439969
     },
     {
       "id": "py-find_config_key-flask-2",
@@ -1454,7 +1616,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 0.5800999933853745
+      "latency_ms": 0.757400004658848
     },
     {
       "id": "py-find_config_key-flask-3",
@@ -1481,7 +1643,7 @@
         "recall": 1.0,
         "f1": 0.8
       },
-      "latency_ms": 0.5896999791730195
+      "latency_ms": 0.6474999827332795
     },
     {
       "id": "py-find_config_key-httpx-1",
@@ -1510,7 +1672,7 @@
         "recall": 1.0,
         "f1": 1.0
       },
-      "latency_ms": 0.5634999834001064
+      "latency_ms": 0.9525999776087701
     },
     {
       "id": "py-find_config_key-flask-4",
@@ -1566,7 +1728,7 @@
         "recall": 0.9166666666666666,
         "f1": 0.6470588235294118
       },
-      "latency_ms": 0.43479999294504523
+      "latency_ms": 1.1020000092685223
     },
     {
       "id": "py-find_path-flask-1",
@@ -1585,7 +1747,7 @@
       },
       "baseline": null,
       "baseline_score": null,
-      "latency_ms": 1.1756999883800745
+      "latency_ms": 1.3307000044733286
     },
     {
       "id": "py-find_path-flask-2",
@@ -1607,7 +1769,7 @@
       },
       "baseline": null,
       "baseline_score": null,
-      "latency_ms": 1.7537999956402928
+      "latency_ms": 0.4980000085197389
     },
     {
       "id": "py-find_path-flask-3",
@@ -1629,7 +1791,7 @@
       },
       "baseline": null,
       "baseline_score": null,
-      "latency_ms": 0.8734999864827842
+      "latency_ms": 0.6246000120881945
     },
     {
       "id": "py-find_path-httpx-1",
@@ -1655,7 +1817,7 @@
       },
       "baseline": null,
       "baseline_score": null,
-      "latency_ms": 1.1632000096142292
+      "latency_ms": 1.2325000134296715
     },
     {
       "id": "py-find_path-httpx-2",
@@ -1679,7 +1841,7 @@
       },
       "baseline": null,
       "baseline_score": null,
-      "latency_ms": 1.1384999961592257
+      "latency_ms": 1.1254000128246844
     }
   ],
   "by_tool": {
@@ -1713,9 +1875,9 @@
         "f1": 0.7728517316017316
       },
       "baseline": {
-        "precision": 0.2721788847117795,
-        "recall": 0.6,
-        "f1": 0.3240969505210991
+        "precision": 0.6316524207478155,
+        "recall": 1.0,
+        "f1": 0.691283979178716
       }
     },
     "what_does_it_call": {
@@ -1726,9 +1888,9 @@
         "f1": 0.8889393939393939
       },
       "baseline": {
-        "precision": 0.42178571428571426,
-        "recall": 0.75,
-        "f1": 0.4845833333333333
+        "precision": 0.4983933039437627,
+        "recall": 1.0,
+        "f1": 0.579137649095806
       }
     }
   },
@@ -1758,6 +1920,6 @@
       "n": 82
     }
   ],
-  "p50_ms": 0.5433000042103231,
-  "p95_ms": 3.040100011276081
+  "p50_ms": 0.5970000056549907,
+  "p95_ms": 2.3609000199940056
 }
