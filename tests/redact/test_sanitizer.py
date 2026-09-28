@@ -47,3 +47,24 @@ def test_extra_patterns() -> None:
     finally:
         configure_extra_patterns([])
     assert sanitize("id ACME-123456 here") == "id ACME-123456 here"
+
+
+def test_connstr_credential_with_embedded_bracket_is_fully_redacted() -> None:
+    out = sanitize("Password=p<ss>word;Database=app")
+    assert out == "Password=<redacted:connstr-credential>;Database=app"
+    assert "Database=app" in out
+    assert out.count("<redacted:connstr-credential>") == 1
+
+
+def test_connstr_credential_starting_with_bracket_is_fully_redacted() -> None:
+    out = sanitize("Password=<3nc0d1ng>Rest;Server=db")
+    assert out == "Password=<redacted:connstr-credential>;Server=db"
+    assert "Server=db" in out
+    assert out.count("<redacted:connstr-credential>") == 1
+
+
+@pytest.mark.parametrize("case", SECRETS, ids=lambda c: c.kind)
+def test_sanitize_is_idempotent(case: SecretCase) -> None:
+    once = sanitize(case.value)
+    assert sanitize(once) == once
+    assert find_secrets(once) == []

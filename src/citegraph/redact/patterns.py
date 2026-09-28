@@ -36,8 +36,11 @@ BUILTIN_PATTERNS: tuple[SecretPattern, ...] = (
     SecretPattern(
         "connstr-credential",
         re.compile(
-            # value excludes < > too, so a `<redacted:kind>` marker never re-matches on a later scan
-            r"(?i)(?<![A-Za-z0-9])(?:password|pwd|user id|uid|accountkey|sharedaccesskey)\s*=\s*([^;\"'\s<>]+)"
+            # each captured char must not start an existing `<redacted:...>` marker, so a later
+            # scan can't re-match the marker itself, without excluding < > from real values (which
+            # would under-redact a value that happens to contain one)
+            r"(?i)(?<![A-Za-z0-9])(?:password|pwd|user id|uid|accountkey|sharedaccesskey)\s*=\s*"
+            r"((?:(?!<redacted:)[^;\"'\s])+)"
         ),
         value_group=1,
     ),
