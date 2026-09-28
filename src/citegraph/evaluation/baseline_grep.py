@@ -32,10 +32,16 @@ def _callers(symbol: str, text: CorpusText) -> list[str]:
     return sorted(found)
 
 
-def _body(definition: PyDef, lines: list[str]) -> list[str]:
+def _body(definition: PyDef, lines: list[str], starts: list[bool]) -> list[str]:
+    """Lines after the def line up to the next statement at or left of the def's indent.
+
+    Only statement starts end the body: a multi-line signature's closing `) -> T:` and the inside of a
+    docstring are continuation lines, not statements.
+    """
     body: list[str] = []
-    for line in lines[definition.line :]:
-        if line.strip() and len(line) - len(line.lstrip()) <= definition.indent:
+    for index in range(definition.line, len(lines)):
+        line = lines[index]
+        if starts[index] and len(line) - len(line.lstrip()) <= definition.indent:
             break
         body.append(line)
     return body
@@ -48,7 +54,8 @@ def _callees(symbol: str, text: CorpusText) -> list[str]:
         return []
     definition = matches[0]
     found: set[str] = set()
-    for line in _body(definition, text.files[(definition.repo, definition.path)]):
+    key = (definition.repo, definition.path)
+    for line in _body(definition, text.files[key], text.statement_starts[key]):
         for name in CALL_NAME.findall(line):
             if name in NOT_CALLS:
                 continue

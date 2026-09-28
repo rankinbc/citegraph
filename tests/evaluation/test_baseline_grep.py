@@ -59,6 +59,54 @@ def test_config_key_grep(make_repo: MakeRepo, repos_root: Path) -> None:
     ]
 
 
+MULTILINE_SIGNATURE = {
+    "m.py": (
+        "class Box:\n"
+        "    def fill(\n"
+        "        self,\n"
+        "        item: str,\n"
+        "    ) -> None:\n"  # closing line sits at the def's own indent
+        "        helper(item)\n"
+        "\n"
+        "\n"
+        "def helper(x):\n"
+        "    return x\n"
+    )
+}
+
+DOCSTRING_DEF = {
+    "m.py": (
+        "def outer():\n"
+        '    """Example:\n'
+        "\n"
+        "def fake(a):\n"  # inside the docstring: must not open a scope
+        "    pass\n"
+        '"""\n'
+        "    target()\n"
+        "\n"
+        "\n"
+        "def target():\n"
+        "    pass\n"
+    )
+}
+
+
+def test_multiline_signature_keeps_the_body_in_the_function(make_repo: MakeRepo, repos_root: Path) -> None:
+    make_repo("r", MULTILINE_SIGNATURE)
+    text = load_corpus_text(repos_root)
+    assert text.enclosing("r", "m.py", 6) == "m.Box.fill"
+    assert baseline_answer(q("what_does_it_call", symbol="r:m.Box.fill"), text) == ["r:m.helper"]
+    assert baseline_answer(q("what_calls", symbol="r:m.helper"), text) == ["r:m.Box.fill"]
+
+
+def test_def_inside_a_docstring_opens_no_scope(make_repo: MakeRepo, repos_root: Path) -> None:
+    make_repo("r", DOCSTRING_DEF)
+    text = load_corpus_text(repos_root)
+    assert "fake" not in text.defs_by_name
+    assert text.enclosing("r", "m.py", 7) == "m.outer"
+    assert baseline_answer(q("what_does_it_call", symbol="r:m.outer"), text) == ["r:m.target"]
+
+
 def test_find_path_has_no_baseline(make_repo: MakeRepo, repos_root: Path) -> None:
     make_repo("shop", SHOP)
     assert (
