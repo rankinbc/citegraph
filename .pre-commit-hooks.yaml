@@ -1,0 +1,6 @@
+- id: citegraph-leak-scan
+  name: citegraph leak scan
+  description: Block commits that contain secret-shaped values
+  entry: citegraph leak-scan --fail-on-findings
+  language: python
+  types: [text]
