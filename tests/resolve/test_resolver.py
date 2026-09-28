@@ -28,7 +28,9 @@ def test_ambiguous_creates_one_edge_per_candidate(tmp_path: Path) -> None:
     }
     store = build_store(tmp_path / "i.db", {"a": repo})
     rows = store.conn.execute("SELECT rule, confidence, candidates FROM edges").fetchall()
-    assert [(r["rule"], r["confidence"], r["candidates"]) for r in rows] == [("ambiguous", 0.5, 2)] * 2
+    assert [(r["rule"], r["confidence"], r["candidates"]) for r in rows] == [
+        ("ambiguous", CONFIDENCE["ambiguous"], 2)
+    ] * 2
 
 
 def test_stoplisted_names_stay_unresolved(tmp_path: Path) -> None:

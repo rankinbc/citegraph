@@ -9,6 +9,7 @@ import pytest
 from citegraph.models import ToolError
 from citegraph.query.common import QueryContext
 from citegraph.query.graph import explain_edge, find_path, what_calls, what_does_it_call
+from citegraph.resolve.rules import CONFIDENCE
 from tests.helpers import build_store
 
 PO = "shop.orders.OrderService.place_order"
@@ -101,6 +102,7 @@ def test_ambiguous_edges_are_noted(tmp_path: Path) -> None:
         "caller.py": "def go(bus):\n    bus.handle_event()\n",
     }
     ctx = QueryContext(build_store(tmp_path / "i.db", {"a": repo}), head_fn=lambda _p: "0" * 40)
-    answer = what_calls(ctx, "m1.handle_event")
+    assert what_calls(ctx, "m1.handle_event").data == []  # calibrated below the default threshold
+    answer = what_calls(ctx, "m1.handle_event", min_confidence=CONFIDENCE["ambiguous"])
     assert [i.rule for i in answer.data] == ["ambiguous"]
     assert any("1 of 2 candidates" in n for n in answer.notes)

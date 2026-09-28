@@ -10,7 +10,7 @@ CONFIDENCE: dict[str, float] = {
     "import_scope": 0.9,
     "repo_unique": 0.7,
     "cross_repo_unique": 0.6,
-    "ambiguous": 0.5,
+    "ambiguous": 0.15,
 }
 
 RULE_MEANING: dict[str, str] = {
