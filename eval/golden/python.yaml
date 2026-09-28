@@ -1,0 +1,427 @@
+# Level-1 golden set for the pinned Python corpus (eval/corpus.yaml: flask 3.1.3, httpx 0.28.1).
+#
+# Bootstrapped from scip-python 0.6.6 output at the pinned shas and verified against source by an agent
+# (no human review). Every expected entry was checked by opening the source at the referencing line.
+#
+# Labeling rules, fixed before citegraph was run on these questions:
+# - Subjects are library definitions (src/flask/, httpx/), taken in sha256 hash order from the SCIP
+#   reference pool; callers and callees may live anywhere in the repo (library, tests, examples).
+# - what_calls: a caller counts when a line inside it calls or instantiates the target with call syntax,
+#   including through an import alias, a re-export or an attribute whose static type resolves to the
+#   target. Bare decorators (`@name`), callbacks passed without a call, type annotations, isinstance
+#   checks, subclassing and calls through a class-valued attribute (`self.response_class(...)`) do not.
+#   Dispatch is static: `self.m()` resolves to the class the checker sees, not to subclass overrides.
+#   Untyped pytest fixtures are typed from their fixture definition (flask's `app` fixture is a Flask).
+#   SCIP misses such calls, so every textual `name(` site in the repo was also read and classified.
+#   Targets with more than 15 true callers are not used (httpx Response and Client were dropped).
+# - what_does_it_call: every in-corpus function, method or class the body calls or instantiates.
+#   Standard library and third-party calls are excluded, and property reads are not calls. Calls in a
+#   nested def belong to the nested def; calls in a lambda belong to the enclosing named function.
+# - find_config_key: a location counts when the line reads the key (os.environ.get / os.environ[...] /
+#   `in os.environ`, a config attribute bound to the key name) or sets or clears it (config-file entry,
+#   os.environ assignment, monkeypatch setenv/setitem, a test fixture's table of variables it resets,
+#   config.update / from_mapping keywords, module or class attributes loaded by from_object).
+#   Docstrings, comments and assertions on message text do not count.
+# - find_path: the expected chain is the unique shortest call path in the verified graph; each hop is a
+#   verified caller pair.
+# - ci: true on questions 1, 4, 7, ... of each tool, in file order.
+
+# what_calls: flask
+- id: py-what_calls-flask-1
+  tool: what_calls
+  args: {symbol: "flask:flask.json.load"}
+  expected:
+    - flask:tests.test_json.test_json_dump_to_file
+  ci: true
+  note: "one test calls flask.json.load; cli.py ep.load(), config.py load(f) (a parameter) and _json.load are other functions"
+- id: py-what_calls-flask-2
+  tool: what_calls
+  args: {symbol: "flask:flask.cli.with_appcontext"}
+  expected:
+    - flask:flask.cli.AppGroup.command.decorator
+  note: "called as with_appcontext(f) in the nested decorator; the three bare @with_appcontext uses are not call syntax"
+- id: py-what_calls-flask-3
+  tool: what_calls
+  args: {symbol: "flask:flask.sansio.blueprints.Blueprint.add_url_rule"}
+  expected:
+    - flask:tests.test_blueprints.test_route_decorator_custom_endpoint_with_dots
+  note: "bp.add_url_rule twice in one test; app.add_url_rule is App's, Scaffold.route's self.add_url_rule is Scaffold's, state/s.add_url_rule is BlueprintSetupState's"
+- id: py-what_calls-flask-4
+  tool: what_calls
+  args: {symbol: "flask:flask.json.tag.TaggedJSONSerializer.register"}
+  expected:
+    - flask:flask.json.tag.TaggedJSONSerializer.__init__
+    - flask:tests.test_json_tag.test_custom_tag
+    - flask:tests.test_json_tag.test_duplicate_tag
+    - flask:tests.test_json_tag.test_tag_order
+  ci: true
+  note: "self.register in __init__ and s.register in three tests; tag.py:41 is module docstring, blueprint.register is Blueprint's"
+- id: py-what_calls-flask-5
+  tool: what_calls
+  args: {symbol: "flask:flask.sansio.app.App.make_config"}
+  expected:
+    - flask:flask.sansio.app.App.__init__
+  note: "single call self.make_config(...) in App.__init__; no other textual call sites"
+- id: py-what_calls-flask-6
+  tool: what_calls
+  args: {symbol: "flask:flask.json.tag.JSONTag.check"}
+  expected:
+    - flask:flask.json.tag.TaggedJSONSerializer.tag
+  note: "tag.check(value) over self.order; the test passes t.check to pytest.raises without calling it"
+- id: py-what_calls-flask-7
+  tool: what_calls
+  args: {symbol: "flask:flask.json.loads"}
+  expected:
+    - flask:flask.json.tag.TaggedJSONSerializer.loads
+    - flask:tests.test_json.test_jsonify_arrays
+    - flask:tests.test_json.test_jsonify_basic_types
+    - flask:tests.test_json.test_jsonify_dicts
+    - flask:tests.test_json.test_jsonify_uuid_types
+  ci: true
+  note: "imported loads(...) in tag.py and flask.json.loads(...) in four tests; app.json.loads/s.loads/json.loads and config.py's loads parameter are other functions"
+- id: py-what_calls-flask-8
+  tool: what_calls
+  args: {symbol: "flask:flask.json.provider.JSONProvider.dumps"}
+  expected:
+    - flask:flask.json.dumps
+    - flask:flask.json.provider.JSONProvider.dump
+    - flask:flask.json.provider.JSONProvider.response
+    - flask:flask.testing.EnvironBuilder.json_dumps
+    - flask:tests.test_basic.test_json_dump_dataclass
+    - flask:tests.test_json.test_json_as_unicode
+  note: "app.json is declared JSONProvider; two tests call app.json.dumps on the Flask fixture (missed by SCIP); DefaultJSONProvider.response's self.dumps is the override"
+- id: py-what_calls-flask-9
+  tool: what_calls
+  args: {symbol: "flask:flask.sessions.SecureCookieSessionInterface"}
+  expected:
+    - flask:flask.app.Flask
+  note: "instantiated once in the Flask class body (session_interface default); the test subclasses it without calling"
+- id: py-what_calls-flask-10
+  tool: what_calls
+  args: {symbol: "flask:flask.wrappers.Response"}
+  expected:
+    - flask:tests.test_basic.test_make_response_with_response_instance
+    - flask:tests.test_basic.test_max_cookie_size
+    - flask:tests.test_basic.test_max_cookie_size.index
+    - flask:tests.test_basic.test_response_types.from_response_headers
+    - flask:tests.test_basic.test_session_vary_cookie.vary_cookie_header_set
+    - flask:tests.test_basic.test_session_vary_cookie.vary_header_set
+    - flask:tests.test_helpers.TestStreaming.test_async_view.index
+    - flask:tests.test_helpers.TestStreaming.test_stream_keeps_session.index
+    - flask:tests.test_helpers.TestStreaming.test_streaming_with_context.index
+    - flask:tests.test_helpers.TestStreaming.test_streaming_with_context_and_custom_close.index
+    - flask:tests.test_helpers.TestStreaming.test_streaming_with_context_as_decorator.index
+    - flask:tests.test_views.test_explicit_head.Index.head
+    - flask:tests.test_views.test_implicit_head.Index.get
+    - flask:tests.type_check.typing_app_decorators.after_async
+    - flask:tests.type_check.typing_app_decorators.after_sync
+  ci: true
+  note: "flask.Response(...) (re-export) and Response() instantiations; helpers.py:85/100 are docstring examples, response_class(...) calls are through an attribute"
+
+# what_calls: httpx
+- id: py-what_calls-httpx-1
+  tool: what_calls
+  args: {symbol: "httpx:httpx._transports.base.BaseTransport.close"}
+  expected:
+    - httpx:httpx._client.Client.close
+    - httpx:httpx._transports.base.BaseTransport.__exit__
+  note: "self._transport.close() and transport.close() in Client.close, self.close() in __exit__; response/stream/pool .close() are other classes"
+- id: py-what_calls-httpx-2
+  tool: what_calls
+  args: {symbol: "httpx:httpx._client.BaseClient._merge_url"}
+  expected:
+    - httpx:httpx._client.BaseClient.build_request
+  note: "single call self._merge_url(url) in build_request"
+- id: py-what_calls-httpx-3
+  tool: what_calls
+  args: {symbol: "httpx:httpx._transports.default._load_httpcore_exceptions"}
+  expected:
+    - httpx:httpx._transports.default.map_httpcore_exceptions
+  ci: true
+  note: "called once inside map_httpcore_exceptions to fill the global map"
+- id: py-what_calls-httpx-4
+  tool: what_calls
+  args: {symbol: "httpx:httpx._content.encode_content"}
+  expected:
+    - httpx:httpx._content.encode_request
+    - httpx:httpx._content.encode_response
+  note: "two calls in encode_request, one in encode_response"
+- id: py-what_calls-httpx-5
+  tool: what_calls
+  args: {symbol: "httpx:httpx._auth.Auth.auth_flow"}
+  expected:
+    - httpx:httpx._auth.Auth.async_auth_flow
+    - httpx:httpx._auth.Auth.sync_auth_flow
+  note: "self.auth_flow(request) in both flow wrappers; the other textual hits are docstrings"
+- id: py-what_calls-httpx-6
+  tool: what_calls
+  args: {symbol: "httpx:httpx._content.encode_html"}
+  expected:
+    - httpx:httpx._content.encode_response
+  ci: true
+  note: "single call in encode_response"
+- id: py-what_calls-httpx-7
+  tool: what_calls
+  args: {symbol: "httpx:httpx._auth.NetRCAuth._build_auth_header"}
+  expected:
+    - httpx:httpx._auth.NetRCAuth.auth_flow
+  note: "self._build_auth_header in NetRCAuth.auth_flow; the calls in BasicAuth.__init__ and DigestAuth resolve to their own classes' methods"
+- id: py-what_calls-httpx-8
+  tool: what_calls
+  args: {symbol: "httpx:httpx._client.Client.patch"}
+  expected:
+    - httpx:tests.client.test_client.test_patch
+  note: "client.patch on an httpx.Client in one test; httpx.patch is the module function, the async test calls AsyncClient.patch"
+- id: py-what_calls-httpx-9
+  tool: what_calls
+  args: {symbol: "httpx:httpx._exceptions.ProtocolError"}
+  expected:
+    - httpx:httpx._auth.DigestAuth._parse_challenge
+    - httpx:httpx._auth.DigestAuth._resolve_qop
+  ci: true
+  note: "raise ProtocolError(...) twice in DigestAuth; subclassing and the httpcore exception map entry are not calls"
+- id: py-what_calls-httpx-10
+  tool: what_calls
+  args: {symbol: "httpx:httpx._auth.Auth"}
+  expected:
+    - httpx:httpx._client.BaseClient._build_request_auth
+  note: "return Auth() in _build_request_auth; subclasses, annotations and isinstance checks are not calls"
+
+# what_does_it_call: flask
+- id: py-what_does_it_call-flask-1
+  tool: what_does_it_call
+  args: {symbol: "flask:flask.sansio.app.App._find_error_handler"}
+  expected:
+    - flask:flask.sansio.scaffold.Scaffold._get_exc_class_and_code
+  ci: true
+  note: "body calls self._get_exc_class_and_code (inherited from Scaffold); type() and dict.get are builtins"
+- id: py-what_does_it_call-flask-2
+  tool: what_does_it_call
+  args: {symbol: "flask:flask.sansio.scaffold.setupmethod.wrapper_func"}
+  expected:
+    - flask:flask.sansio.scaffold.Scaffold._check_setup_finished
+  note: "self._check_setup_finished(f_name) on self: Scaffold; f(...) is the wrapped callable, not a fixed target"
+- id: py-what_does_it_call-flask-3
+  tool: what_does_it_call
+  args: {symbol: "flask:flask.sansio.blueprints.Blueprint.record_once"}
+  expected:
+    - flask:flask.sansio.blueprints.Blueprint.record
+  note: "self.record(...); update_wrapper is functools; func(state) runs in the nested wrapper"
+- id: py-what_does_it_call-flask-4
+  tool: what_does_it_call
+  args: {symbol: "flask:flask.app.Flask.__init__"}
+  expected:
+    - flask:flask.app.Flask.send_static_file
+    - flask:flask.cli.AppGroup
+    - flask:flask.sansio.app.App.__init__
+    - flask:flask.sansio.app.App.add_url_rule
+  ci: true
+  note: "super().__init__ (App), cli.AppGroup(), self.add_url_rule, and send_static_file in the view lambda; weakref.ref is stdlib"
+- id: py-what_does_it_call-flask-5
+  tool: what_does_it_call
+  args: {symbol: "flask:flask.sansio.scaffold.Scaffold.put"}
+  expected:
+    - flask:flask.sansio.scaffold.Scaffold._method_route
+  note: "one-line shortcut to self._method_route"
+- id: py-what_does_it_call-flask-6
+  tool: what_does_it_call
+  args: {symbol: "flask:flask.templating.DispatchingJinjaLoader.list_templates"}
+  expected:
+    - flask:flask.sansio.app.App.iter_blueprints
+  note: "self.app.iter_blueprints(); loader.list_templates() is on Jinja loaders, set.update/add are builtins"
+- id: py-what_does_it_call-flask-7
+  tool: what_does_it_call
+  args: {symbol: "flask:flask.cli.run_command"}
+  expected:
+    - flask:flask.cli.ScriptInfo.load_app
+    - flask:flask.cli.show_server_banner
+    - flask:flask.helpers.get_debug_flag
+  ci: true
+  note: "info.load_app(), get_debug_flag(), show_server_banner(); run_simple and is_running_from_reloader are werkzeug"
+- id: py-what_does_it_call-flask-8
+  tool: what_does_it_call
+  args: {symbol: "flask:flask.sansio.scaffold.Scaffold.patch"}
+  expected:
+    - flask:flask.sansio.scaffold.Scaffold._method_route
+  note: "one-line shortcut to self._method_route"
+- id: py-what_does_it_call-flask-9
+  tool: what_does_it_call
+  args: {symbol: "flask:flask.sansio.scaffold.Scaffold.route.decorator"}
+  expected:
+    - flask:flask.sansio.scaffold.Scaffold.add_url_rule
+  note: "self.add_url_rule(...) on self: Scaffold; options.pop is dict"
+- id: py-what_does_it_call-flask-10
+  tool: what_does_it_call
+  args: {symbol: "flask:flask.templating.stream_template"}
+  expected:
+    - flask:flask.templating._stream
+  ci: true
+  note: "_stream(app, template, context); _get_current_object and get_or_select_template are werkzeug/jinja2"
+
+# what_does_it_call: httpx
+- id: py-what_does_it_call-httpx-1
+  tool: what_does_it_call
+  args: {symbol: "httpx:httpx._models.Request.__setstate__"}
+  expected:
+    - httpx:httpx._content.UnattachedStream
+  note: "instantiates UnattachedStream(); setattr is a builtin"
+- id: py-what_does_it_call-httpx-2
+  tool: what_does_it_call
+  args: {symbol: "httpx:httpx._api.options"}
+  expected:
+    - httpx:httpx._api.request
+  note: "returns request('OPTIONS', ...)"
+- id: py-what_does_it_call-httpx-3
+  tool: what_does_it_call
+  args: {symbol: "httpx:httpx._urls.URL.copy_add_param"}
+  expected:
+    - httpx:httpx._urls.QueryParams.add
+    - httpx:httpx._urls.URL.copy_with
+  ci: true
+  note: "self.copy_with(params=self.params.add(...)); params is a property returning QueryParams"
+- id: py-what_does_it_call-httpx-4
+  tool: what_does_it_call
+  args: {symbol: "httpx:httpx._client._same_origin"}
+  expected:
+    - httpx:httpx._client._port_or_default
+  note: "_port_or_default called for both URLs; scheme and host are properties"
+- id: py-what_does_it_call-httpx-5
+  tool: what_does_it_call
+  args: {symbol: "httpx:httpx._multipart.MultipartStream.__aiter__"}
+  expected:
+    - httpx:httpx._multipart.MultipartStream.iter_chunks
+  note: "iterates self.iter_chunks()"
+- id: py-what_does_it_call-httpx-6
+  tool: what_does_it_call
+  args: {symbol: "httpx:httpx._models.Response.__setstate__"}
+  expected:
+    - httpx:httpx._content.UnattachedStream
+  ci: true
+  note: "instantiates UnattachedStream(); setattr is a builtin"
+- id: py-what_does_it_call-httpx-7
+  tool: what_does_it_call
+  args: {symbol: "httpx:httpx._urlparse.percent_encoded"}
+  expected:
+    - httpx:httpx._urlparse.PERCENT
+  note: "PERCENT(char) in the list comprehension (PERCENT is a module function); rstrip/join are str methods"
+- id: py-what_does_it_call-httpx-8
+  tool: what_does_it_call
+  args: {symbol: "httpx:httpx._multipart.DataField.render_data"}
+  expected:
+    - httpx:httpx._utils.to_bytes
+  note: "to_bytes(self.value) imported from _utils; hasattr is a builtin"
+- id: py-what_does_it_call-httpx-9
+  tool: what_does_it_call
+  args: {symbol: "httpx:httpx._decoders.BrotliDecoder.decode"}
+  expected:
+    - httpx:httpx._exceptions.DecodingError
+  ci: true
+  note: "raise DecodingError(...); self._decompress is bound to a brotli decompressor method in __init__"
+- id: py-what_does_it_call-httpx-10
+  tool: what_does_it_call
+  args: {symbol: "httpx:httpx._auth.DigestAuth._get_header_value"}
+  expected:
+    - httpx:httpx._utils.to_str
+  note: "to_str(value) per header field; enumerate/items/format are builtins"
+
+# find_config_key
+- id: py-find_config_key-flask-1
+  tool: find_config_key
+  args: {pattern: "FLASK_DEBUG"}
+  expected:
+    - flask:src/flask/app.py:627
+    - flask:src/flask/cli.py:481
+    - flask:src/flask/helpers.py:32
+    - flask:tests/conftest.py:21
+    - flask:tests/test_helpers.py:345
+  ci: true
+  note: "reads in helpers.get_debug_flag and Flask.run (`in os.environ`), write in cli._set_debug, test reset table and monkeypatch.setenv"
+- id: py-find_config_key-flask-2
+  tool: find_config_key
+  args: {pattern: "FLASK_RUN_FROM_CLI"}
+  expected:
+    - flask:src/flask/app.py:611
+    - flask:src/flask/cli.py:675
+    - flask:tests/conftest.py:22
+  note: "read in Flask.run, set in FlaskGroup.make_context, cleared by the test reset table"
+- id: py-find_config_key-flask-3
+  tool: find_config_key
+  args: {pattern: "FLASK_SKIP_DOTENV"}
+  expected:
+    - flask:src/flask/helpers.py:43
+    - flask:tests/test_cli.py:579
+  note: "read in get_load_dotenv, set by monkeypatch.setitem(os.environ, ...) in a test"
+- id: py-find_config_key-httpx-1
+  tool: find_config_key
+  args: {pattern: "SSL_CERT_FILE"}
+  expected:
+    - httpx:httpx/_config.py:34
+    - httpx:httpx/_config.py:35
+    - httpx:tests/conftest.py:24
+  ci: true
+  note: "os.environ.get and os.environ[...] reads in create_ssl_context; tests/conftest.py lists it among the variables the autouse fixture clears"
+- id: py-find_config_key-flask-4
+  tool: find_config_key
+  args: {pattern: "SECRET_KEY"}
+  expected:
+    - flask:examples/tutorial/flaskr/__init__.py:11
+    - flask:src/flask/app.py:183
+    - flask:src/flask/sansio/app.py:216
+    - flask:tests/conftest.py:49
+    - flask:tests/static/config.json:3
+    - flask:tests/static/config.toml:2
+    - flask:tests/test_config.py:10
+    - flask:tests/test_config.py:112
+    - flask:tests/test_config.py:116
+    - flask:tests/test_config.py:120
+    - flask:tests/test_config.py:124
+    - flask:tests/test_config.py:137
+  note: "Flask app-config key: default_config entry, ConfigAttribute read, JSON and TOML files, from_mapping/update keywords, from_object attributes; config.py:66 is a docstring"
+
+# find_path
+- id: py-find_path-flask-1
+  tool: find_path
+  args: {from_symbol: "flask:flask.app.Flask.__init__", to_symbol: "flask:flask.helpers.get_debug_flag"}
+  expected:
+    - flask:flask.app.Flask.__init__
+    - flask:flask.sansio.app.App.__init__
+    - flask:flask.sansio.app.App.make_config
+    - flask:flask.helpers.get_debug_flag
+  ci: true
+  note: "super().__init__ -> self.make_config -> get_debug_flag(); no other callee of Flask.__init__ or App.__init__ reaches get_debug_flag sooner"
+- id: py-find_path-flask-2
+  tool: find_path
+  args: {from_symbol: "flask:flask.sansio.scaffold.Scaffold.patch", to_symbol: "flask:flask.sansio.scaffold.Scaffold.route"}
+  expected:
+    - flask:flask.sansio.scaffold.Scaffold.patch
+    - flask:flask.sansio.scaffold.Scaffold._method_route
+    - flask:flask.sansio.scaffold.Scaffold.route
+  note: "patch calls only _method_route, which calls self.route"
+- id: py-find_path-flask-3
+  tool: find_path
+  args: {from_symbol: "flask:flask.templating.DispatchingJinjaLoader.get_source", to_symbol: "flask:flask.debughelpers.explain_template_loading_attempts"}
+  expected:
+    - flask:flask.templating.DispatchingJinjaLoader.get_source
+    - flask:flask.templating.DispatchingJinjaLoader._get_source_explained
+    - flask:flask.debughelpers.explain_template_loading_attempts
+  note: "get_source -> _get_source_explained (explain branch) -> function-local import of explain_template_loading_attempts"
+- id: py-find_path-httpx-1
+  tool: find_path
+  args: {from_symbol: "httpx:httpx._api.options", to_symbol: "httpx:httpx._client.BaseClient._merge_url"}
+  expected:
+    - httpx:httpx._api.options
+    - httpx:httpx._api.request
+    - httpx:httpx._client.Client.request
+    - httpx:httpx._client.BaseClient.build_request
+    - httpx:httpx._client.BaseClient._merge_url
+  ci: true
+  note: "options -> request -> client.request on the Client it opens -> self.build_request -> self._merge_url; build_request is _merge_url's only caller"
+- id: py-find_path-httpx-2
+  tool: find_path
+  args: {from_symbol: "httpx:httpx._client.Client._send_handling_redirects", to_symbol: "httpx:httpx._client._same_origin"}
+  expected:
+    - httpx:httpx._client.Client._send_handling_redirects
+    - httpx:httpx._client.BaseClient._build_redirect_request
+    - httpx:httpx._client.BaseClient._redirect_headers
+    - httpx:httpx._client._same_origin
+  note: "_redirect_headers is _same_origin's only caller and _build_redirect_request its only library caller"
