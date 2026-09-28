@@ -221,6 +221,26 @@ def test_load_scip_index_decodes_multi_line_typed_range(tmp_path: Path) -> None:
     assert label_callers(index, store, "shop") == {"shop:shop.orders.OrderService.validate": {PO}}
 
 
+def test_load_scip_index_prefers_typed_range_over_legacy_range(tmp_path: Path) -> None:
+    # Both encodings present with different values: per scip.proto, "Consumers SHOULD prefer the
+    # typed form when available and fall back to the repeated int32 form otherwise." The legacy
+    # range here points at a line outside every symbol's span, so a wrong-precedence bug is
+    # observable as a missing/wrong answer, not just a differing-but-still-valid one.
+    legacy = _packed_range_field([0, 0, 3])  # "import os", line 1 (1-based) - inside no symbol
+    typed = _length_delimited(8, _single_line_range_bytes(9, 8, 14))  # the real charge(total) call
+    occurrence = legacy + typed + _string_field(2, CHARGE_SYMBOL) + _varint_field(3, 0)
+    document = _document_bytes("src/shop/orders.py", [occurrence])
+    scip_path = tmp_path / "index.scip"
+    scip_path.write_bytes(_index_bytes([document]))
+
+    index = load_scip_index(scip_path)
+
+    assert index["documents"][0]["occurrences"][0]["range"] == [9, 8, 14]  # type: ignore[index]
+
+    store = build_store(tmp_path / "i.db", SAMPLE)
+    assert label_callers(index, store, "shop") == {"shop:shop.payments.charge": {PO}}
+
+
 def test_label_callers_skips_occurrence_with_no_range(tmp_path: Path) -> None:
     # Neither the deprecated `range` field nor typed_range is set: load_scip_index normalizes this
     # to an empty range list, and label_callers must skip it rather than crash.
