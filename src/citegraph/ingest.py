@@ -90,7 +90,7 @@ def scan_repo(repo: Path, config: CitegraphConfig) -> RepoInfo:
     try:
         sha = head_sha(repo)
     except IngestError as exc:
-        raise IngestError(f"{repo.name}: no commits yet (git rev-parse HEAD failed)") from exc
+        raise IngestError(f"{repo.name}: no commits yet, or HEAD is unreadable: {exc}") from exc
     files: list[RepoFile] = []
     for rel in tracked_files(repo):
         lang = language_for(rel)

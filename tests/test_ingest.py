@@ -59,8 +59,9 @@ def test_repo_without_commits_raises(repos_root: Path) -> None:
     empty = repos_root / "empty"
     empty.mkdir()
     git(empty, "init", "-q")
-    with pytest.raises(IngestError, match="no commits"):
+    with pytest.raises(IngestError, match="no commits") as excinfo:
         scan_repo(empty, CitegraphConfig())
+    assert "rev-parse" in str(excinfo.value)
 
 
 @pytest.mark.parametrize(
