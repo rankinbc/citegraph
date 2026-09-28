@@ -8,6 +8,11 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+from citegraph.extract import EXTRACTORS, module_name_for
+from citegraph.ingest import language_for
+from citegraph.resolve import resolve_all
+from citegraph.store import Store
+
 GIT_ENV = {
     "GIT_AUTHOR_NAME": "citegraph-tests",
     "GIT_AUTHOR_EMAIL": "tests@example.invalid",
@@ -46,3 +51,30 @@ class SecretCase:
 def load_secret_cases() -> list[SecretCase]:
     data = tomllib.loads((FIXTURES / "secrets.toml").read_text(encoding="utf-8"))
     return [SecretCase(c["kind"], "".join(c["parts"]), bool(c["must_match"])) for c in data["case"]]
+
+
+def build_store(db_path: Path, repos: dict[str, dict[str, str]], resolve: bool = True) -> Store:
+    """Index in-memory repos without git: repo path /virtual/<name>, head sha all zeros."""
+    store = Store.open(db_path)
+    for name, files in repos.items():
+        repo_id = store.upsert_repo(name, f"/virtual/{name}", "0" * 40)
+        for rel, text in files.items():
+            lang = language_for(rel)
+            if lang is None:
+                continue
+            data = text.encode("utf-8")
+            result = EXTRACTORS[lang].extract(rel, data)
+            module = module_name_for(rel) if lang == "python" else None
+            store.upsert_file(repo_id, rel, lang, "h", data.count(b"\n") + 1, result, module)
+    store.commit()
+    if resolve:
+        resolve_all(store)
+    return store
+
+
+def edge_set(store: Store) -> set[tuple[str, str, str, str]]:
+    sql = (
+        "SELECT fs.qualified_name AS f, ts.qualified_name AS t, e.kind, e.rule FROM edges e "
+        "JOIN symbols fs ON fs.id = e.from_symbol_id JOIN symbols ts ON ts.id = e.to_symbol_id"
+    )
+    return {(r["f"], r["t"], r["kind"], r["rule"]) for r in store.conn.execute(sql)}
