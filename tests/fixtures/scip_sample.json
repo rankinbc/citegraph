@@ -1,0 +1,19 @@
+{
+  "documents": [
+    {
+      "relativePath": "src/shop/payments.py",
+      "occurrences": [
+        {"range": [3, 4, 10], "symbol": "scip-python python shop 0.1 `shop.payments`/charge().", "symbolRoles": 1}
+      ]
+    },
+    {
+      "relativePath": "src/shop/orders.py",
+      "occurrences": [
+        {"range": [1, 25, 31], "symbol": "scip-python python shop 0.1 `shop.payments`/charge().", "symbolRoles": 2},
+        {"range": [9, 8, 14], "symbol": "scip-python python shop 0.1 `shop.payments`/charge().", "symbolRoles": 0},
+        {"range": [7, 13, 21], "symbol": "scip-python python shop 0.1 `shop.orders`/OrderService#validate().", "symbolRoles": 0},
+        {"range": [8, 8, 13], "symbol": "local 3", "symbolRoles": 0}
+      ]
+    }
+  ]
+}
