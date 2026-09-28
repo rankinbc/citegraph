@@ -87,6 +87,19 @@ def test_repo_without_commits_is_skipped_with_warning(make_repo: MakeRepo, repos
     assert any("fresh" in w and "no commits" in w for w in stats.warnings)
 
 
+def test_transient_scan_failure_keeps_previously_indexed_repo(sample_root: Path) -> None:
+    index_root(sample_root)
+    billing_head = sample_root / "billing" / ".git" / "HEAD"
+    billing_head.write_text("ref: refs/heads/does-not-exist\n", encoding="utf-8")
+    again = index_root(sample_root)
+    assert any("billing" in w for w in again.warnings)
+    store = open_index(again.db_path)
+    row = store.conn.execute(
+        "SELECT 1 FROM symbols WHERE qualified_name = ?", ("billing.invoices.create_invoice",)
+    ).fetchone()
+    assert row is not None
+
+
 def test_process_pool_path_matches_inline(sample_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(indexer_mod, "PARALLEL_THRESHOLD", 0)
     stats = index_root(sample_root, name="pool", jobs=2)

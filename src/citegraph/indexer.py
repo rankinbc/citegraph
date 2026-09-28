@@ -97,15 +97,19 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
         store.commit()
         changed = False
         shas: dict[str, str] = {}
+        failed: list[str] = []
         for repo_path in repos:
             try:
                 info = scan_repo(repo_path, config)
             except IngestError as exc:
                 stats.warnings.append(str(exc))
+                failed.append(repo_path.name)
                 continue
             changed = _index_repo(store, info, jobs, stats) or changed
             shas[info.name] = info.head_sha
-        if store.delete_repos_not_in(shas):
+        # a repo that failed to scan this run (transient git error) keeps its previously indexed
+        # rows; only a repo no longer discovered under root at all is dropped
+        if store.delete_repos_not_in([*shas, *failed]):
             changed = True
         store.commit()
         if changed or (store.count("edges") == 0 and store.count("refs") > 0):
