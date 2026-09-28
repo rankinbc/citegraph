@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 
 from citegraph.redact.leakscan import Finding, scan_paths
-from tests.helpers import load_secret_cases
+from tests.helpers import FIXTURES, load_secret_cases
 
 SECRET = next(c for c in load_secret_cases() if c.kind == "aws-access-key").value
 
@@ -39,3 +39,7 @@ def test_sqlite_is_scanned_cell_by_cell(tmp_path: Path) -> None:
     conn.commit()
     conn.close()
     assert scan_paths([db]) == [Finding(f"{db}#t", 2, "aws-access-key")]
+
+
+def test_fixture_file_is_leak_scan_clean() -> None:
+    assert scan_paths([FIXTURES / "secrets.toml"]) == []
