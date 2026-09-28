@@ -1,0 +1,27 @@
+- id: sample-callers-charge
+  tool: what_calls
+  args: {symbol: "shop:shop.payments.charge"}
+  expected: ["shop:shop.orders.OrderService.place_order"]
+  ci: true
+- id: sample-callees-place-order
+  tool: what_does_it_call
+  args: {symbol: "shop:shop.orders.OrderService.place_order"}
+  expected:
+    - shop:shop.orders.OrderService.validate
+    - shop:shop.orders.compute_total
+    - shop:shop.payments.charge
+    - billing:billing.invoices.create_invoice
+    - billing:billing.notifications.notify_customer
+- id: sample-path-main-render
+  tool: find_path
+  args: {from_symbol: "shop:shop.cli.main", to_symbol: "billing:billing.invoices.render_invoice"}
+  expected:
+    - shop:shop.cli.main
+    - shop:shop.orders.OrderService.place_order
+    - billing:billing.invoices.create_invoice
+    - billing:billing.invoices.render_invoice
+- id: sample-config-tax-rate
+  tool: find_config_key
+  args: {pattern: "TAX_RATE"}
+  expected: ["shop:.env.example:2", "shop:appsettings.json:6", "shop:src/shop/orders.py:20"]
+  ci: true

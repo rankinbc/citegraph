@@ -11,6 +11,7 @@ import click
 
 from citegraph import __version__
 from citegraph.audit import AuditLog, summarize
+from citegraph.cli.eval_commands import eval_group
 from citegraph.home import index_path
 from citegraph.indexer import index_root
 from citegraph.ingest import IngestError
@@ -34,6 +35,9 @@ def _parse_param(raw: str) -> tuple[str, object]:
 @click.version_option(__version__, prog_name="citegraph")
 def main() -> None:
     """citegraph: evidence-tagged code graph for AI coding agents."""
+
+
+main.add_command(eval_group)
 
 
 @main.command()
