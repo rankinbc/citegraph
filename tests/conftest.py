@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers import commit_all, git, write_files
+from citegraph.query.common import QueryContext
+from citegraph.store import Store
+from tests.fixtures.sample_corpus import SAMPLE
+from tests.helpers import build_store, commit_all, git, write_files
 
 
 @pytest.fixture(autouse=True)
@@ -34,3 +37,13 @@ def make_repo(repos_root: Path) -> Callable[[str, dict[str, str]], Path]:
         return repo
 
     return _make
+
+
+@pytest.fixture
+def sample_store(tmp_path: Path) -> Store:
+    return build_store(tmp_path / "sample.db", SAMPLE)
+
+
+@pytest.fixture
+def sample_ctx(sample_store: Store) -> QueryContext:
+    return QueryContext(sample_store, head_fn=lambda _path: "0" * 40)
