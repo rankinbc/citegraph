@@ -23,14 +23,28 @@ DEFINITION, IMPORT = 1, 2
 # https://raw.githubusercontent.com/sourcegraph/scip/main/scip.proto (fetched 2026-09-28):
 # `message Index` (line 26): documents = 2.
 # `message Document` (line 76): relative_path = 1, occurrences = 2.
-# `message Occurrence` (line 692): range = 1 (repeated int32, deprecated but still emitted by
-# scip-python; packed by default, unpacked accepted too), symbol = 2, symbol_roles = 3.
+# `message Occurrence` (line 692): range = 1 (repeated int32, deprecated; new producers SHOULD NOT
+# set it, but it is still accepted, packed or unpacked), symbol = 2, symbol_roles = 3,
+# single_line_range = 8, multi_line_range = 9 (the `typed_range` oneof; new producers SHOULD set
+# one of these instead of `range` - scip.proto's comment above `message Occurrence`, lines 678-691).
+# `message SingleLineRange` (line 649): line = 1, start_character = 2, end_character = 3.
+# `message MultiLineRange` (line 665): start_line = 1, start_character = 2, end_line = 3,
+# end_character = 4.
 _INDEX_DOCUMENTS = 2
 _DOCUMENT_RELATIVE_PATH = 1
 _DOCUMENT_OCCURRENCES = 2
 _OCCURRENCE_RANGE = 1
 _OCCURRENCE_SYMBOL = 2
 _OCCURRENCE_SYMBOL_ROLES = 3
+_OCCURRENCE_SINGLE_LINE_RANGE = 8
+_OCCURRENCE_MULTI_LINE_RANGE = 9
+_SINGLE_LINE_RANGE_LINE = 1
+_SINGLE_LINE_RANGE_START_CHAR = 2
+_SINGLE_LINE_RANGE_END_CHAR = 3
+_MULTI_LINE_RANGE_START_LINE = 1
+_MULTI_LINE_RANGE_START_CHAR = 2
+_MULTI_LINE_RANGE_END_LINE = 3
+_MULTI_LINE_RANGE_END_CHAR = 4
 
 _WIRE_VARINT = 0
 _WIRE_FIXED64 = 1
@@ -75,7 +89,10 @@ def label_callers(index: dict[str, object], store: Store, repo: str) -> dict[str
             target = parse_scip_symbol(str(occurrence.get("symbol", "")))
             if target is None:
                 continue
-            line = int(occurrence["range"][0]) + 1
+            range_values: list[Any] = occurrence.get("range") or []
+            if not range_values:
+                continue  # neither the legacy `range` field nor typed_range was set
+            line = int(range_values[0]) + 1
             enclosing = _enclosing(store, repo, path, line)
             if enclosing is not None and enclosing != target:
                 callers[f"{repo}:{target}"].add(f"{repo}:{enclosing}")
@@ -164,20 +181,59 @@ def _unpack_varints(data: bytes) -> list[int]:
     return values
 
 
+def _parse_single_line_range(data: bytes) -> list[int]:
+    line = start_char = end_char = 0
+    for field_no, wire_type, value in _iter_fields(data):
+        if wire_type != _WIRE_VARINT:
+            continue
+        if field_no == _SINGLE_LINE_RANGE_LINE:
+            line = cast(int, value)
+        elif field_no == _SINGLE_LINE_RANGE_START_CHAR:
+            start_char = cast(int, value)
+        elif field_no == _SINGLE_LINE_RANGE_END_CHAR:
+            end_char = cast(int, value)
+    return [line, start_char, end_char]
+
+
+def _parse_multi_line_range(data: bytes) -> list[int]:
+    start_line = start_char = end_line = end_char = 0
+    for field_no, wire_type, value in _iter_fields(data):
+        if wire_type != _WIRE_VARINT:
+            continue
+        if field_no == _MULTI_LINE_RANGE_START_LINE:
+            start_line = cast(int, value)
+        elif field_no == _MULTI_LINE_RANGE_START_CHAR:
+            start_char = cast(int, value)
+        elif field_no == _MULTI_LINE_RANGE_END_LINE:
+            end_line = cast(int, value)
+        elif field_no == _MULTI_LINE_RANGE_END_CHAR:
+            end_char = cast(int, value)
+    return [start_line, start_char, end_line, end_char]
+
+
 def _parse_occurrence(data: bytes) -> dict[str, Any]:
-    range_values: list[int] = []
+    legacy_range: list[int] = []
+    typed_range: list[int] = []
     symbol = ""
     roles = 0
     for field_no, wire_type, value in _iter_fields(data):
         if field_no == _OCCURRENCE_RANGE and wire_type == _WIRE_LENGTH_DELIMITED:
-            range_values = _unpack_varints(cast(bytes, value))
+            legacy_range = _unpack_varints(cast(bytes, value))
         elif field_no == _OCCURRENCE_RANGE and wire_type == _WIRE_VARINT:
-            range_values.append(cast(int, value))  # unpacked repeated encoding
+            legacy_range.append(cast(int, value))  # unpacked repeated encoding
         elif field_no == _OCCURRENCE_SYMBOL and wire_type == _WIRE_LENGTH_DELIMITED:
             symbol = cast(bytes, value).decode("utf-8")
         elif field_no == _OCCURRENCE_SYMBOL_ROLES and wire_type == _WIRE_VARINT:
             roles = cast(int, value)
-    return {"range": range_values, "symbol": symbol, "symbolRoles": roles}
+        elif field_no == _OCCURRENCE_SINGLE_LINE_RANGE and wire_type == _WIRE_LENGTH_DELIMITED:
+            typed_range = _parse_single_line_range(cast(bytes, value))
+        elif field_no == _OCCURRENCE_MULTI_LINE_RANGE and wire_type == _WIRE_LENGTH_DELIMITED:
+            typed_range = _parse_multi_line_range(cast(bytes, value))
+    # Prefer the legacy `range` field when both are set: scip.proto requires producers that set
+    # both to keep them semantically equivalent, so this is a deterministic tie-break, not a
+    # correctness choice - and it matches what a producer that still emits `range` expects a
+    # consumer to read.
+    return {"range": legacy_range or typed_range, "symbol": symbol, "symbolRoles": roles}
 
 
 def _parse_document(data: bytes) -> dict[str, Any]:

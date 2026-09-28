@@ -149,3 +149,88 @@ def test_load_scip_index_truncated_varint_raises(tmp_path: Path) -> None:
     scip_path.write_bytes(bytes([0x08, 0x96]))
     with pytest.raises(ValueError):
         load_scip_index(scip_path)
+
+
+# --- typed_range (scip.proto's Occurrence.typed_range oneof): new producers SHOULD set this and
+# SHOULD NOT set the deprecated `range` field, so the reader must decode it too.
+
+
+def _single_line_range_bytes(line: int, start_char: int, end_char: int) -> bytes:
+    # SingleLineRange (scip.proto): line = 1, start_character = 2, end_character = 3.
+    return _varint_field(1, line) + _varint_field(2, start_char) + _varint_field(3, end_char)
+
+
+def _multi_line_range_bytes(start_line: int, start_char: int, end_line: int, end_char: int) -> bytes:
+    # MultiLineRange (scip.proto): start_line = 1, start_character = 2, end_line = 3, end_character = 4.
+    return (
+        _varint_field(1, start_line)
+        + _varint_field(2, start_char)
+        + _varint_field(3, end_line)
+        + _varint_field(4, end_char)
+    )
+
+
+def _occurrence_bytes_typed(typed_range_field_no: int, typed_range: bytes, symbol: str, roles: int) -> bytes:
+    # No legacy `range` field at all: mirrors a producer that only sets typed_range.
+    return (
+        _length_delimited(typed_range_field_no, typed_range)  # 8 = single_line_range, 9 = multi_line_range
+        + _string_field(2, symbol)
+        + _varint_field(3, roles)
+    )
+
+
+def test_load_scip_index_decodes_single_line_typed_range(tmp_path: Path) -> None:
+    charge_ref = _occurrence_bytes_typed(8, _single_line_range_bytes(9, 8, 14), CHARGE_SYMBOL, 0)
+    document = _document_bytes("src/shop/orders.py", [charge_ref])
+    scip_path = tmp_path / "index.scip"
+    scip_path.write_bytes(_index_bytes([document]))
+
+    index = load_scip_index(scip_path)
+
+    assert index == {
+        "documents": [
+            {
+                "relativePath": "src/shop/orders.py",
+                "occurrences": [{"range": [9, 8, 14], "symbol": CHARGE_SYMBOL, "symbolRoles": 0}],
+            }
+        ]
+    }
+
+    store = build_store(tmp_path / "i.db", SAMPLE)
+    assert label_callers(index, store, "shop") == {"shop:shop.payments.charge": {PO}}
+
+
+def test_load_scip_index_decodes_multi_line_typed_range(tmp_path: Path) -> None:
+    validate_ref = _occurrence_bytes_typed(9, _multi_line_range_bytes(7, 13, 7, 21), VALIDATE_SYMBOL, 0)
+    document = _document_bytes("src/shop/orders.py", [validate_ref])
+    scip_path = tmp_path / "index.scip"
+    scip_path.write_bytes(_index_bytes([document]))
+
+    index = load_scip_index(scip_path)
+
+    assert index == {
+        "documents": [
+            {
+                "relativePath": "src/shop/orders.py",
+                "occurrences": [{"range": [7, 13, 7, 21], "symbol": VALIDATE_SYMBOL, "symbolRoles": 0}],
+            }
+        ]
+    }
+
+    store = build_store(tmp_path / "i.db", SAMPLE)
+    assert label_callers(index, store, "shop") == {"shop:shop.orders.OrderService.validate": {PO}}
+
+
+def test_label_callers_skips_occurrence_with_no_range(tmp_path: Path) -> None:
+    # Neither the deprecated `range` field nor typed_range is set: load_scip_index normalizes this
+    # to an empty range list, and label_callers must skip it rather than crash.
+    rangeless = _string_field(2, CHARGE_SYMBOL) + _varint_field(3, 0)
+    document = _document_bytes("src/shop/orders.py", [rangeless])
+    scip_path = tmp_path / "index.scip"
+    scip_path.write_bytes(_index_bytes([document]))
+
+    index = load_scip_index(scip_path)
+    assert index["documents"][0]["occurrences"][0]["range"] == []  # type: ignore[index]
+
+    store = build_store(tmp_path / "i.db", SAMPLE)
+    assert label_callers(index, store, "shop") == {}
