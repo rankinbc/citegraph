@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 import builtins
+import hashlib
+import json
+
+# Bump when resolver logic or the stoplist changes, so existing indexes re-resolve on the next run.
+RESOLVER_VERSION = "1"
 
 CONFIDENCE: dict[str, float] = {
     "direct": 1.0,
@@ -23,6 +28,17 @@ RULE_MEANING: dict[str, str] = {
 }
 
 MAX_CANDIDATES = 10
+
+
+def resolver_fingerprint() -> str:
+    """Short hash of everything that decides stored edges besides the files themselves.
+
+    Edges keep the confidence they were resolved with, so an index whose stored fingerprint differs
+    is re-resolved even when no file changed. Computed per call so a changed table is always seen.
+    """
+    payload = json.dumps([RESOLVER_VERSION, sorted(CONFIDENCE.items()), MAX_CANDIDATES])
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+
 
 COMMON_NAMES = frozenset(
     {

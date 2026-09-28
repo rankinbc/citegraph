@@ -178,6 +178,13 @@ class Store:
             (_now(), json.dumps(repo_shas), json.dumps(counts), parse_errors, int(leak_scan_clean), run_id),
         )
 
+    def set_meta(self, key: str, value: str) -> None:
+        self._write("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", (key, value))
+
+    def get_meta(self, key: str) -> str | None:
+        row = self.conn.execute("SELECT value FROM meta WHERE key = ?", (sanitize(key),)).fetchone()
+        return None if row is None else str(row["value"])
+
     def count(self, table: str) -> int:
         if table not in TABLES:
             raise ValueError(f"unknown table {table!r}")

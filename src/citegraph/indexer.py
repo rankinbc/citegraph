@@ -17,9 +17,11 @@ from citegraph.models import ExtractResult
 from citegraph.redact import configure_extra_patterns, sanitize
 from citegraph.redact.leakscan import scan_paths
 from citegraph.resolve import resolve_all
+from citegraph.resolve.rules import resolver_fingerprint
 from citegraph.store import Store
 
 PARALLEL_THRESHOLD = 50
+RESOLVER_FINGERPRINT_KEY = "resolver_fingerprint"
 
 
 class IndexStats(BaseModel):
@@ -112,8 +114,12 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
         if store.delete_repos_not_in([*shas, *failed]):
             changed = True
         store.commit()
-        if changed or (store.count("edges") == 0 and store.count("refs") > 0):
+        fingerprint = resolver_fingerprint()
+        rules_changed = store.get_meta(RESOLVER_FINGERPRINT_KEY) != fingerprint
+        if changed or rules_changed or (store.count("edges") == 0 and store.count("refs") > 0):
             resolve_all(store)
+            store.set_meta(RESOLVER_FINGERPRINT_KEY, fingerprint)
+            store.commit()
             stats.resolved = True
         stats.repos = len(shas)
         stats.symbols = store.count("symbols")

@@ -6,6 +6,7 @@ import pytest
 import citegraph.indexer as indexer_mod
 from citegraph.indexer import index_root
 from citegraph.ingest import IngestError
+from citegraph.resolve.rules import CONFIDENCE
 from citegraph.store import Store
 from tests.fixtures.sample_corpus import BILLING, SAMPLE_EDGES, SHOP
 from tests.helpers import commit_all, edge_set, git, load_secret_cases, write_files
@@ -40,6 +41,20 @@ def test_reindex_without_changes_skips_work(sample_root: Path) -> None:
     assert again.files_changed == 0
     assert again.resolved is False
     assert again.edges == len(SAMPLE_EDGES)
+
+
+def test_confidence_change_re_resolves_without_file_changes(
+    sample_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index_root(sample_root)
+    monkeypatch.setitem(CONFIDENCE, "same_file", 0.93)
+    again = index_root(sample_root)
+    assert again.files_changed == 0
+    assert again.resolved is True
+    rows = open_index(again.db_path).conn.execute(
+        "SELECT DISTINCT confidence FROM edges WHERE rule = 'same_file'"
+    )
+    assert [r["confidence"] for r in rows] == [0.93]
 
 
 def test_incremental_matches_full_reindex(sample_root: Path) -> None:
