@@ -59,6 +59,16 @@ def test_get_symbol_detail(sample_ctx: QueryContext) -> None:
     assert detail.container == "shop.orders"
     assert detail.children == {"method": ["place_order", "validate"]}
     assert (answer.evidence[0].path, answer.evidence[0].line) == ("src/shop/orders.py", 6)
+    assert answer.notes == []
+
+
+def test_get_symbol_children_truncation_note(tmp_path: Path) -> None:
+    methods = "".join(f"    def m{i}(self):\n        pass\n\n" for i in range(55))
+    store = build_store(tmp_path / "big.db", {"a": {"big.py": "class Big:\n" + methods}})
+    ctx = QueryContext(store, head_fn=lambda _p: "0" * 40)
+    answer = get_symbol(ctx, "Big")
+    assert len(answer.data.children["method"]) == 50
+    assert any(n.startswith("truncated:") for n in answer.notes)
 
 
 def test_resolve_symbol_accepts_agent_forms(sample_ctx: QueryContext) -> None:
@@ -76,6 +86,17 @@ def test_ambiguous_symbol_lists_candidates(tmp_path: Path) -> None:
     assert info.value.code == "ambiguous_symbol"
     assert {d["qualified_name"] for d in info.value.data} == {"x.dup", "y.dup"}
     assert ctx.resolve_symbol("a:x.dup")["repo"] == "a"
+
+
+def test_ambiguous_more_than_fifty_candidates(tmp_path: Path) -> None:
+    repos = {f"repo{i}": {"m.py": "def dup():\n    pass\n"} for i in range(51)}
+    store = build_store(tmp_path / "many.db", repos)
+    ctx = QueryContext(store, head_fn=lambda _p: "0" * 40)
+    with pytest.raises(ToolError) as info:
+        ctx.resolve_symbol("dup")
+    assert info.value.code == "ambiguous_symbol"
+    assert "more than 50 symbols match" in info.value.message
+    assert len(info.value.data) == 50
 
 
 def test_not_found_suggests_close_names(sample_ctx: QueryContext) -> None:

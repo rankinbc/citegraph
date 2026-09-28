@@ -69,22 +69,37 @@ def get_symbol(ctx: QueryContext, name: str) -> Answer[SymbolDetail]:
     row = ctx.resolve_symbol(name)
     qualified: str = row["qualified_name"]
     children: dict[str, list[str]] = {}
+    per_kind_limit = 50
+    row_limit = 500
+    dropped = 0
     child_rows = ctx.rows(
         SYMBOL_SELECT
-        + " WHERE s.qualified_name LIKE ? ESCAPE '\\' AND r.name = ? ORDER BY s.line_start LIMIT 500",
-        (like_escape(qualified) + ".%", row["repo"]),
+        + " WHERE s.qualified_name LIKE ? ESCAPE '\\' AND r.name = ? ORDER BY s.line_start LIMIT ?",
+        (like_escape(qualified) + ".%", row["repo"], row_limit),
     )
     for child in child_rows:
         remainder: str = child["qualified_name"][len(qualified) + 1 :]
         if "." not in remainder:
             names = children.setdefault(child["kind"], [])
-            if len(names) < 50:
+            if len(names) < per_kind_limit:
                 names.append(child["name"])
+            else:
+                dropped += 1
+    notes: list[str] = []
+    if dropped:
+        notes.append(f"truncated: children capped at {per_kind_limit} per kind; {dropped} more not shown")
+    if len(child_rows) == row_limit:
+        notes.append(f"truncated: child scan capped at {row_limit} rows; more children may exist")
     detail = SymbolDetail(
         **symbol_info(row).model_dump(),
         container=qualified.rsplit(".", 1)[0] if "." in qualified else None,
         children=children,
     )
     return ctx.answer(
-        detail, evidence=[evidence_for(row)], sources=["parsed"], confidences=[], repos={row["repo"]}
+        detail,
+        evidence=[evidence_for(row)],
+        sources=["parsed"],
+        confidences=[],
+        repos={row["repo"]},
+        notes=notes,
     )

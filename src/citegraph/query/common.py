@@ -144,9 +144,14 @@ class QueryContext:
         if len(candidates) == 1:
             return candidates[0]
         if candidates:
+            message = (
+                f"more than 50 symbols match {name!r}"
+                if len(candidates) > 50
+                else f"{len(candidates)} symbols match {name!r}"
+            )
             raise ToolError(
                 "ambiguous_symbol",
-                f"{len(candidates)} symbols match {name!r}",
+                message,
                 hint="pass a qualified name, or repo:qualified.name",
                 data=[_candidate(r) for r in candidates[:50]],
             )
