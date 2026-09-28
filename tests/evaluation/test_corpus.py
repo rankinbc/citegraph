@@ -20,6 +20,29 @@ def test_fetch_pins_exact_sha(make_repo: MakeRepo, tmp_path: Path) -> None:
     assert git(path, "rev-parse", "HEAD") == first
 
 
+def test_fetch_populates_working_tree_at_own_head(make_repo: MakeRepo, tmp_path: Path) -> None:
+    upstream = make_repo("upstream", {"a.py": "x = 1\n"})
+    sha = git(upstream, "rev-parse", "HEAD")
+    repos = [CorpusRepo(name="up", url=str(upstream), sha=sha, lang="python")]
+    dest = tmp_path / "corpus"
+    [path] = fetch_corpus(repos, dest)
+    assert (path / "a.py").is_file()
+
+
+def test_fetch_recovers_from_interrupted_clone(make_repo: MakeRepo, tmp_path: Path) -> None:
+    upstream = make_repo("upstream", {"a.py": "x = 1\n"})
+    sha = git(upstream, "rev-parse", "HEAD")
+    repos = [CorpusRepo(name="up", url=str(upstream), sha=sha, lang="python")]
+    dest = tmp_path / "corpus"
+    dest.mkdir()
+    path = dest / "up"
+    # simulate a run interrupted between the --no-checkout clone and the checkout
+    git(tmp_path, "clone", "--quiet", "--no-checkout", str(upstream), str(path))
+    assert not (path / "a.py").exists()
+    fetch_corpus(repos, dest)
+    assert (path / "a.py").is_file()
+
+
 def test_load_corpus(tmp_path: Path) -> None:
     f = tmp_path / "corpus.yaml"
     f.write_text(

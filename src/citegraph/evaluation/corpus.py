@@ -32,21 +32,22 @@ def fetch_corpus(repos: list[CorpusRepo], dest: Path) -> list[Path]:
     paths: list[Path] = []
     for repo in repos:
         path = dest / repo.name
-        fresh = not (path / ".git").exists()
-        if fresh:
+        if not (path / ".git").exists():
             _git("clone", "--quiet", "--no-checkout", repo.url, str(path))
-        # no check=True: rev-parse HEAD can fail in a fresh --no-checkout clone on some git versions
-        current = subprocess.run(
-            ["git", "-C", str(path), "rev-parse", "--verify", "--quiet", "HEAD"],
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
-        # a fresh --no-checkout clone leaves the working tree empty even when HEAD already
-        # resolves to repo.sha (e.g. the pin is the default branch tip), so always check out
-        # once right after cloning; on a later call, only re-fetch when the pin moved
-        if fresh or current != repo.sha:
-            if not fresh:
-                _git("-C", str(path), "fetch", "--quiet", "origin")
-            _git("-C", str(path), "checkout", "--quiet", "--detach", repo.sha)
+        # no check=True: a missing commit (not yet fetched, or an interrupted clone) exits non-zero
+        have_sha = (
+            subprocess.run(
+                ["git", "-C", str(path), "cat-file", "-e", f"{repo.sha}^{{commit}}"],
+                capture_output=True,
+                text=True,
+            ).returncode
+            == 0
+        )
+        if not have_sha:
+            _git("-C", str(path), "fetch", "--quiet", "origin")
+        # always checkout: idempotent and cheap, and the only way to be sure the working tree is
+        # populated - a --no-checkout clone (fresh or left over from an interrupted run) can leave
+        # HEAD already resolved to repo.sha without any files on disk
+        _git("-C", str(path), "checkout", "--quiet", "--detach", repo.sha)
         paths.append(path)
     return paths
