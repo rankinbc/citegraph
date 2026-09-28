@@ -19,3 +19,16 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run pyright
       - run: uv run pytest -q
+
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.13
+      - run: uv sync --all-extras
+      - uses: actions/cache@v4
+        with:
+          path: ~/.citegraph/corpus
+          key: corpus-${{ hashFiles('eval/corpus.yaml') }}
+      - run: uv run citegraph eval run --golden eval/golden/python.yaml --subset ci --no-charts --out eval-out --check-baseline eval/baseline.ci.json
