@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "citegraph": {
+      "command": "uvx",
+      "args": ["citegraph", "serve", "--root", "~/.citegraph/corpus/repos", "--name", "eval-corpus"]
+    }
+  }
+}

@@ -1,6 +1,6 @@
 [project]
 name = "citegraph"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Read-only MCP server that indexes git repos into a code graph and answers with evidence"
 readme = "README.md"
 license = "MIT"
