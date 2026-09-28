@@ -61,7 +61,7 @@ def test_repo_without_commits_raises(repos_root: Path) -> None:
     git(empty, "init", "-q")
     with pytest.raises(IngestError, match="no commits") as excinfo:
         scan_repo(empty, CitegraphConfig())
-    assert "rev-parse" in str(excinfo.value)
+    assert "rev-parse failed in" in str(excinfo.value)
 
 
 @pytest.mark.parametrize(
