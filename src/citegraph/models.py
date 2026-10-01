@@ -30,6 +30,7 @@ class Reference(BaseModel):
     to_name: str
     kind: RefKind
     line: int
+    receiver_type: str | None = None
 
 
 class ImportFact(BaseModel):
@@ -46,7 +47,7 @@ class ConfigKey(BaseModel):
 
 
 class EntryPoint(BaseModel):
-    kind: Literal["main-block", "console-script"]
+    kind: Literal["main-block", "console-script", "program-main"]
     name: str
     line: int
     target: str | None = None
@@ -59,6 +60,7 @@ class ExtractResult(BaseModel):
     config_keys: list[ConfigKey] = Field(default_factory=list[ConfigKey])
     entry_points: list[EntryPoint] = Field(default_factory=list[EntryPoint])
     parse_error: bool = False
+    module: str | None = None
 
 
 class Evidence(BaseModel):

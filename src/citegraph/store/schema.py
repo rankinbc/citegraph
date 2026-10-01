@@ -1,6 +1,6 @@
 """SQLite schema. Names, locations and metadata only: no source text, no config values."""
 
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -20,7 +20,8 @@ CREATE INDEX IF NOT EXISTS ix_symbols_qname ON symbols(qualified_name);
 CREATE INDEX IF NOT EXISTS ix_symbols_file ON symbols(file_id);
 CREATE TABLE IF NOT EXISTS refs(
   id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
-  from_qualified TEXT NOT NULL, to_name TEXT NOT NULL, kind TEXT NOT NULL, line INTEGER NOT NULL);
+  from_qualified TEXT NOT NULL, to_name TEXT NOT NULL, kind TEXT NOT NULL, line INTEGER NOT NULL,
+  receiver_type TEXT);
 CREATE TABLE IF NOT EXISTS imports(
   id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
   local_name TEXT NOT NULL, target TEXT NOT NULL, line INTEGER NOT NULL);

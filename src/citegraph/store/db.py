@@ -51,6 +51,7 @@ class Store:
         conn.execute("PRAGMA secure_delete=ON")
         conn.executescript(SCHEMA)
         store = cls(conn)
+        store._migrate()
         store._write(
             "INSERT OR REPLACE INTO meta(key, value) VALUES ('schema_version', ?)", (SCHEMA_VERSION,)
         )
@@ -66,6 +67,12 @@ class Store:
         conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         return cls(conn)
+
+    def _migrate(self) -> None:
+        """Add columns that a newer schema version introduced to an index written by an older release."""
+        columns = {str(r["name"]) for r in self.conn.execute("PRAGMA table_info(refs)")}
+        if "receiver_type" not in columns:
+            self._write("ALTER TABLE refs ADD COLUMN receiver_type TEXT")
 
     def _write(self, sql: str, params: Sequence[object] = ()) -> sqlite3.Cursor:
         clean = [sanitize(p) if isinstance(p, str) else p for p in params]
@@ -134,8 +141,9 @@ class Store:
             )
         for r in result.references:
             self._write(
-                "INSERT INTO refs(file_id, from_qualified, to_name, kind, line) VALUES (?, ?, ?, ?, ?)",
-                (file_id, r.from_qualified, r.to_name, r.kind, r.line),
+                "INSERT INTO refs(file_id, from_qualified, to_name, kind, line, receiver_type) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (file_id, r.from_qualified, r.to_name, r.kind, r.line, r.receiver_type),
             )
         for i in result.imports:
             self._write(

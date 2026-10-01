@@ -193,6 +193,14 @@ def test_incremental_matches_full_reindex(sample_root: Path) -> None:
     assert not any(t == "billing.notifications.notify_customer" for _, t, _, _ in inc_edges)
 
 
+def test_schema_change_rewrites_unchanged_files(sample_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    first = index_root(sample_root)
+    monkeypatch.setattr(indexer_mod, "SCHEMA_VERSION", "999")
+    again = index_root(sample_root)
+    assert again.files_changed == first.files_changed
+    assert edge_set(open_index(again.db_path)) == SAMPLE_EDGES
+
+
 def test_large_file_is_skipped(make_repo: MakeRepo, repos_root: Path) -> None:
     make_repo("big", {"small.py": "def f():\n    pass\n", "huge.py": "x = 1\n" * 400_000})
     stats = index_root(repos_root)

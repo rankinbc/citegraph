@@ -20,6 +20,7 @@ from citegraph.redact.leakscan import scan_paths
 from citegraph.resolve import resolve_all
 from citegraph.resolve.rules import resolver_fingerprint
 from citegraph.store import Store
+from citegraph.store.schema import SCHEMA_VERSION
 
 PARALLEL_THRESHOLD = 50
 RESOLVER_FINGERPRINT_KEY = "resolver_fingerprint"
@@ -27,13 +28,13 @@ CONTENT_FINGERPRINT_KEY = "content_fingerprint"
 
 
 def content_fingerprint() -> str:
-    """Everything that decides stored rows besides the files themselves: the citegraph version (extractors)
-    and the redaction patterns and parameters, including extra patterns from citegraph.toml.
+    """Everything that decides stored rows besides the files themselves: the citegraph version (extractors),
+    the schema version, and the redaction patterns and parameters, including extra patterns from citegraph.toml.
 
     Rows are rewritten only when a file's content hash changes, so an index whose stored fingerprint differs
     has every file re-extracted and rewritten through the sanitizing write path.
     """
-    return f"{__version__}:{redaction_fingerprint()}"
+    return f"{__version__}:{SCHEMA_VERSION}:{redaction_fingerprint()}"
 
 
 class IndexStats(BaseModel):

@@ -3,8 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from citegraph.models import ConfigKey, ExtractResult, Symbol, ToolError
+from citegraph.models import ConfigKey, ExtractResult, Reference, Symbol, ToolError
 from citegraph.store import EdgeRow, Store
+from citegraph.store.schema import SCHEMA_VERSION
 from tests.helpers import load_secret_cases
 
 SECRET = next(c for c in load_secret_cases() if c.kind == "github-token").value
@@ -110,3 +111,32 @@ def test_read_only_missing_index_is_not_indexed(tmp_path: Path) -> None:
     with pytest.raises(ToolError) as info:
         Store.open_read_only(tmp_path / "missing.db")
     assert info.value.code == "not_indexed"
+
+
+def test_receiver_type_is_stored(tmp_path: Path) -> None:
+    store = Store.open(tmp_path / "i.db")
+    repo = store.upsert_repo("shop", "/r/shop", "a" * 40)
+    result = result_with("f")
+    result.references.append(
+        Reference(from_qualified="m.f", to_name="Save", kind="call", line=2, receiver_type="IRepo")
+    )
+    store.upsert_file(repo, "m.cs", "csharp", "h", 3, result, module="m")
+    row = store.conn.execute("SELECT to_name, receiver_type FROM refs").fetchone()
+    assert (row["to_name"], row["receiver_type"]) == ("Save", "IRepo")
+
+
+def test_open_adds_receiver_type_to_an_index_from_an_older_release(tmp_path: Path) -> None:
+    path = tmp_path / "old.db"
+    conn = sqlite3.connect(path)
+    conn.execute(
+        "CREATE TABLE refs(id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL, from_qualified TEXT NOT NULL, "
+        "to_name TEXT NOT NULL, kind TEXT NOT NULL, line INTEGER NOT NULL)"
+    )
+    conn.execute("CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    conn.execute("INSERT INTO meta(key, value) VALUES ('schema_version', '1')")
+    conn.commit()
+    conn.close()
+    store = Store.open(path)
+    columns = {r["name"] for r in store.conn.execute("PRAGMA table_info(refs)")}
+    assert "receiver_type" in columns
+    assert store.get_meta("schema_version") == SCHEMA_VERSION
