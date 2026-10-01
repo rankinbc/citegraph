@@ -112,6 +112,8 @@ the absolute path to your folder:
 The assistant sees citegraph's tools and decides when to call them; Claude Code shows each call it makes. It gets back
 file and line references, which it can quote and open. In Claude Code, `/mcp` shows whether citegraph is connected.
 
+See [Using it with Claude Code](#using-it-with-claude-code) for what changes in a session and tips for teams.
+
 **Without an AI assistant**, the same nine tools work from the terminal:
 
 ```bash
@@ -120,6 +122,64 @@ citegraph query find_config_key pattern=PAYMENT_API_URL --root ~/src/my-repos
 citegraph status --root ~/src/my-repos    # what is indexed, and whether it is out of date
 citegraph audit stats                     # every tool call is logged locally
 ```
+
+## Using it with Claude Code
+
+### Setup
+
+```bash
+uv tool install git+https://github.com/rankinbc/citegraph   # once
+citegraph index ~/src/my-repos                               # once, then after you pull
+claude mcp add citegraph -- citegraph serve --root ~/src/my-repos
+```
+
+Start Claude Code and run `/mcp`: citegraph should be listed as connected with nine tools. To share the setup with
+your team, add it with `--scope project` instead; Claude Code then writes the server entry to a `.mcp.json` file you can
+commit.
+
+### What changes in a session
+
+Without citegraph, a question like "what calls `place_order`?" turns into a loop: Claude greps for the name, reads
+each matching file to tell real callers from look-alikes, and often greps again for the next layer. With citegraph
+connected, Claude makes one tool call (`what_calls`) and gets back the list of callers, each with a file, a line and a
+confidence. It can then open only the lines that matter, and quote them in its answer.
+
+When it connects, citegraph tells Claude how to use it: check `status` first, cite the evidence it returns, and open
+code with its own file tools rather than expecting source text from citegraph.
+
+### Benefits
+
+- **Less context spent on searching.** Claude reads the real callers instead of every match. In the eval's
+  `flask.json.loads` question that is 5 exact callers instead of 21 grep hits to sort through.
+- **Answers you can check.** Every result carries `path:line` and the git commit, so Claude can cite exactly where a
+  claim comes from and you can open it yourself.
+- **It knows how sure it is.** Each link between two functions says why it exists and how reliable that kind of link
+  measured in the eval. Name-only guesses are hidden by default, and the answer says how many were hidden, so Claude
+  can ask for them deliberately instead of treating a guess as fact.
+- **It knows when it is out of date.** If a repo has new commits since it was indexed, answers are flagged as stale
+  and say to re-index.
+- **Questions across repositories.** Index several services together and ask who calls a function from another repo,
+  or where a shared config key is read across all of them.
+- **Questions grep cannot answer directly**, such as the shortest call path between two functions, or a repo
+  overview with entry points and the most-called functions.
+- **Safe to leave connected.** citegraph is read-only: it cannot edit files or run commands, it never returns source
+  code, it redacts anything that looks like a secret, and it logs every call locally (`citegraph audit tail`).
+
+### Prompts that work well
+
+- "Before I change the signature of `charge_card`, list everything that calls it, two levels up."
+- "Trace how a request to the `/orders` handler reaches the database layer."
+- "We want to remove the `LEGACY_TAX_MODE` setting. Where is it defined and where is it read?"
+- "I am new to this repo. Give me an overview: main modules, entry points, and the most-called functions."
+- "Which of these callers are tests and which are production code?"
+
+### Tips
+
+- Re-index after pulling. Only changed files are re-read, so it takes seconds; a git `post-merge` hook that runs
+  `citegraph index <folder>` keeps it current automatically.
+- To nudge Claude toward the graph, add a line to your project's `CLAUDE.md`, for example: "For questions about
+  callers, call paths or config keys, use the citegraph tools before searching files."
+- Check usage with `citegraph audit stats` (calls per tool, errors, latency).
 
 ## Example
 
