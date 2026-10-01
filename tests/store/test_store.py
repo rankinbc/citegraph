@@ -164,3 +164,15 @@ def test_a_secret_shaped_string_constant_is_redacted(tmp_path: Path) -> None:
     values = [str(r["value"]) for r in store.conn.execute("SELECT value FROM string_consts ORDER BY line")]
     assert values[1] == "classify_stems"
     assert SECRET not in values[0] and values[0].startswith("<redacted")
+
+
+def test_read_only_index_from_another_schema_version_is_not_indexed(tmp_path: Path) -> None:
+    db = tmp_path / "old.db"
+    store = Store.open(db)
+    store._write("UPDATE meta SET value = '2' WHERE key = 'schema_version'")
+    store.commit()
+    store.conn.close()
+    with pytest.raises(ToolError) as info:
+        Store.open_read_only(db)
+    assert info.value.code == "not_indexed"
+    assert info.value.hint is not None and "citegraph index" in info.value.hint

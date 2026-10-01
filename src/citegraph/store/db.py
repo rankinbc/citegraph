@@ -66,6 +66,17 @@ class Store:
             )
         conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True, check_same_thread=False)
         conn.row_factory = sqlite3.Row
+        try:
+            row = conn.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
+        except sqlite3.DatabaseError:  # no meta table: not an index at all
+            row = None
+        if row is None or row["value"] != SCHEMA_VERSION:
+            conn.close()
+            raise ToolError(
+                "not_indexed",
+                f"the index {path.name} was written by another version of citegraph",
+                hint="run `citegraph index <root>` to rebuild it",
+            )
         return cls(conn)
 
     def _migrate(self) -> None:
