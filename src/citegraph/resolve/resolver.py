@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 
+from citegraph.resolve.csharp import CSharpResolver
 from citegraph.resolve.graph import Graph, RefRow, Resolution, Sym, by_name, load_graph, lookup
 from citegraph.resolve.rules import CONFIDENCE
 from citegraph.store import EdgeRow, Store
@@ -43,6 +44,7 @@ def _resolve_python(graph: Graph, ref: RefRow, source: Sym) -> Resolution | None
 
 def resolve_all(store: Store) -> dict[str, int]:
     graph = load_graph(store)
+    csharp = CSharpResolver(graph)
     stats: Counter[str] = Counter()
     rows: list[EdgeRow] = []
     refs = [
@@ -58,6 +60,8 @@ def resolve_all(store: Store) -> dict[str, int]:
             "SELECT id, file_id, from_qualified, to_name, kind, receiver_type FROM refs ORDER BY id"
         )
     ]
+    # C# member lookups walk base types, so every C# inherit reference is resolved before the rest
+    refs.sort(key=lambda r: not (graph.file_lang[r.file_id] == "csharp" and r.kind == "inherit"))
     for ref in refs:
         stats["refs"] += 1
         source = graph.file_syms[ref.file_id].get(ref.from_qualified)
@@ -65,10 +69,7 @@ def resolve_all(store: Store) -> dict[str, int]:
             stats["unresolved"] += 1
             continue
         if graph.file_lang[ref.file_id] == "csharp":
-            # until the C# rules land, a C# reference is resolved by the name rules alone
-            resolution = by_name(
-                graph, graph.file_repo[ref.file_id], ref.to_name.rsplit(".", 1)[-1], "csharp"
-            )
+            resolution = csharp.resolve(ref, source)
         else:
             resolution = _resolve_python(graph, ref, source)
         if resolution is None:
