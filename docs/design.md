@@ -205,6 +205,8 @@ class Answer(BaseModel, Generic[T]):
 | `declared_type` - C#: the receiver's declared type, or a base type up to 3 hops, has the member | 0.85 (initial; C# eval pending) |
 | `repo_unique` - only one symbol with that name in the repo | 0.7 |
 | `cross_repo_unique` - only one symbol with that name across all repos | 0.6 |
+| `queue_match` - a job sent by name, matched to its handler (any language) | 0.9 (initial) |
+| `curated` - declared in citegraph.overrides.yaml | 1.0 |
 | `ambiguous` - n candidates | 0.15, calibrated on the Level-1 eval (was 0.5; `eval/reports/2026-09-28/analysis.md`, section 14 item 10); all candidates listed in `notes` |
 
 Names on a common-name stoplist (`get`, `set`, `run`, `init`, `__init__`, `ToString`, `map`, and similar),
@@ -286,6 +288,8 @@ Three layers, in order of importance:
    rows are zeroed (`secure_delete`), a run that deleted rows optimizes the FTS index, and a rewrite also runs
    VACUUM, so they hold no residue. `index` runs the scan on the database at the end of every run and records
    `leak_scan_clean`. Also shipped as a pre-commit hook.
+
+**String constants.** Job names behind constants are the one stored value: only `const string` values shaped like `^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$`, written through the sanitizing path, so a secret-shaped value is redacted; the leak scan covers the `string_consts` table.
 
 ## 8. CLI and configuration
 
@@ -563,3 +567,26 @@ Implements [docs/specs/2026-10-01-csharp-design.md](specs/2026-10-01-csharp-desi
     tools resolve a name to the whole group, so `what_calls`, `what_does_it_call`, `find_path` and `explain_edge`
     work on overloaded methods and partial classes; a module symbol yields to a type of the same name. A local or
     parameter without a known type still shadows an outer declaration of the same name.
+
+### Cross-service links (2026-10-01)
+
+Implements [docs/specs/2026-10-01-cross-service-links-design.md](specs/2026-10-01-cross-service-links-design.md).
+
+35. **Re-export following.** A Python name imported from a package that re-exports it (`from pkg import f` where
+    `pkg/__init__.py` imports `f` from a submodule) resolves to the defining symbol. Eval delta: 0.73 -> 0.78.
+36. **Projects.** Opt-in with `projects = "auto"` or a list of folders in `citegraph.toml`. Auto detection: a folder
+    with `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` or a `.sln`, or a `.csproj` folder with no
+    `.sln` above it; the repository root is never a project. Each project is a logical repo named `<repo>/<folder>`,
+    and module names and evidence paths are relative to the folder. A scan that fails for a project leaves that
+    project's previous index in place rather than dropping it.
+37. **Queue facts.** Sends are stored as refs of kind `queue` (literal name), `queue_const` (constant) and
+    `queue_actor` (Python actor send); handlers go in table `queue_handlers`; name-shaped C# `const string` values go
+    in `string_consts`. The schema version is 3, and `[queues] send_methods` is part of the content fingerprint, so
+    changing it re-extracts. The stored constant value is the one exception to "no values" (see section 7).
+38. **`queue_match` resolution.** A `queue_const` is resolved to its value through the C# type rules, then matched to
+    handlers by name in any language. A Python `.send` first resolves its receiver through the Python rules to the
+    actor, then links to that handler. Two handlers with one name give `ambiguous` edges.
+39. **Curated links.** Entries in `citegraph.overrides.yaml` become `refs` with rule `curated`, confidence 1.0, and
+    the entry's `note` in `refs.note`. Names must match a qualified name exactly, optionally prefixed `repo:`. Entries
+    whose names match nothing or more than one are listed by `status` as `overrides_unresolved`. The evidence source
+    is the line in the overrides file.

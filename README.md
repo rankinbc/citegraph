@@ -54,6 +54,7 @@ public class OrdersController
 | "What calls `charge_card`, two levels up?" | `what_calls` |
 | "What does `checkout` call?" | `what_does_it_call` |
 | "How does the `/orders` handler end up calling the database?" | `find_path` (shortest call chain) |
+| "Which endpoint triggers the `classify_stems` job, and what does that job do?" | `what_calls` / `what_does_it_call` across services (job queues, hand-written links) |
 | "Where is `PAYMENT_API_URL` defined, and what reads it?" | `find_config_key` (env vars, `appsettings.json`, YAML, `.env`) |
 | "Give me an overview of the billing repo." | `repo_overview` (languages, modules, entry points, hotspots) |
 | "Why do you think A calls B?" | `explain_edge` |
@@ -77,6 +78,8 @@ citegraph index ~/src/my-repos
 # 3. Connect it to Claude Code
 claude mcp add citegraph -- citegraph serve --root ~/src/my-repos
 ```
+
+Monorepo? Add `projects = "auto"` to a `citegraph.toml` in the folder you index, so each project is indexed with its own module names ([guide](docs/guide.md#monorepos-and-projects)).
 
 Then ask questions as usual. Run `/mcp` in Claude Code to check that citegraph is connected. To try it without an
 assistant, the same tools work from the terminal:
@@ -140,6 +143,7 @@ known weak spot, and C# is not yet benchmarked. Details: [guide](docs/guide.md#a
   matched by name, with lower confidence.
 - Python method calls on untyped variables resolve by name only, the main cause of missed callers.
 - No generic type inference in C#; extension methods resolve by name.
+- Links between services: Dramatiq job queues and hand-written links only; HTTP calls between services are not linked yet.
 
 Full list: [docs/guide.md#limitations](docs/guide.md#limitations).
 

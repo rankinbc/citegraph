@@ -8,6 +8,8 @@ security model, and the full list of limitations.
 - [Other MCP clients](#other-mcp-clients)
 - [Command line](#command-line)
 - [Configuration](#configuration)
+- [Monorepos and projects](#monorepos-and-projects)
+- [Linking services](#linking-services)
 - [Tools and the answer format](#tools-and-the-answer-format)
 - [Accuracy and evaluation](#accuracy-and-evaluation)
 - [Security model](#security-model)
@@ -93,10 +95,53 @@ languages = ["python", "csharp"]                    # the default; drop one to s
 include = ["services/**"]                           # only index matching paths (default: everything)
 exclude = ["**/legacy/**", "**/node_modules/**"]    # replaces the default exclude list
 extra_redaction_patterns = ["ACME-[0-9]+"]          # your own secret formats, redacted like the built-in ones
+projects = "off"                                     # "auto" or a list of folders; see Monorepos and projects
+
+[queues]
+send_methods = ["Enqueue", "EnqueueAsync"]          # C# methods whose first argument names a job
 ```
 
 The default exclude list skips `node_modules`, `.venv`, `venv`, `vendor`, `dist` and `build` folders. Only
 git-tracked files are read.
+
+## Monorepos and projects
+
+A monorepo holds several projects. By default a whole git repository is one logical repo, so a Python module in
+`components/worker/app/tasks.py` is named `components.worker.app.tasks`, and the worker's own `from app.x import y`
+does not match. Turn on projects in `citegraph.toml` at the folder you index:
+
+    projects = "auto"                                   # or a list: ["components/api", "components/worker"]
+
+With `"auto"`, a folder holding `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` or a `.sln` is a project,
+and so is a folder holding a `.csproj` with no `.sln` above it; the repository root never is. Each project is indexed
+as its own logical repo named `<repo>/<folder>` (for example `site/components/worker`), its module names and evidence
+paths start at the folder, and two projects can use the same package name. Files outside every project stay in the
+repository's own logical repo.
+
+## Linking services
+
+**Job queues.** citegraph links a job sent to a Dramatiq queue to the function that runs it, across languages:
+
+- Sends: C# calls named `Enqueue`/`EnqueueAsync` (configurable) whose first argument is a string literal or a
+  constant (`DramatiqTasks.ClassifyStems`); Python `actor.send(...)`, `actor.send_with_options(...)` and
+  `broker.enqueue(Message(actor_name="..."))`.
+- Handlers: functions decorated with `@dramatiq.actor(...)`, under their `actor_name` or their own name.
+- The link is an edge with rule `queue_match` (confidence 0.9); two handlers with one name give `ambiguous` edges.
+
+To link a job named by a constant, citegraph stores that constant's value, but only `const string` values shaped
+like a name (letters, digits, `_ . : -`, at most 64 characters), redacted like every other stored string.
+
+**Hand-written links.** For anything else (an HTTP call, a message bus), add `citegraph.overrides.yaml` to any indexed
+repository:
+
+    edges:
+      - from: Shop.Orders.OrderService.PlaceOrder
+        to: payments:payments.api.charge
+        note: HTTP POST /charge
+
+Names are qualified names, optionally `repo:qualified.name`. Each entry is an edge with rule `curated` (confidence
+1.0) whose evidence is its line in the file; `explain_edge` shows the note. `status` lists entries whose names match
+no symbol or more than one (`overrides_unresolved`).
 
 ## Tools and the answer format
 
@@ -256,10 +301,8 @@ The leak scanner also ships as a pre-commit hook (`citegraph-leak-scan` in
   ambiguous and hidden by default. This is the largest cause of lost recall in the eval.
 - **`self` in nested functions and inherited methods.** `self.m()` inside a closure, or where `m` is defined on a base
   class in another file, falls back to name matching.
-- **Nested package roots.** A Python module is named by its path from the repo root, or from a top-level `src/`.
-  Imports into packages nested deeper, such as a monorepo's `services/<name>/<pkg>/` or a `backend/app/` layout,
-  resolve only when the import path matches that full path; finding package roots from `pyproject.toml` or
-  `__init__.py` is planned.
+- **Nested package roots.** Without `projects`, a Python module is named by its path from the repo root, or from a top-level `src/`; set `projects = "auto"` for monorepos.
+- **Service links.** Dramatiq queues and hand-written links only; HTTP calls between services are not linked yet.
 - **Stoplist and candidate cap.** Common names (`close`, `add`, and in C# `Add`, `ToString`, `ToListAsync` and
   similar), dunders such as `super().__init__()`, and names with more than 10 definitions are never matched by name
   alone; unless an import or the same file settles them, they stay unresolved rather than produce noise.
