@@ -64,22 +64,43 @@ def test_base64_with_slash_after_a_key_or_folder_is_redacted_as_one_value(kind: 
     assert sanitize(f"key {value} end") == f"key {kept}<redacted:high-entropy> end"
 
 
-def test_random_base64_with_slash_is_fully_redacted_in_env_lines() -> None:
-    rng = random.Random(20260930)
+def random_base64_with_slash(seed: int, count: int = 2000) -> list[str]:
+    rng = random.Random(seed)
     values: list[str] = []
-    while len(values) < 2000:
+    while len(values) < count:
         value = base64.b64encode(rng.randbytes(30)).decode()  # 40 characters
         if "/" in value:
             values.append(value)
+    return values
+
+
+def fully_redacted(text: str, value: str) -> bool:
+    """Every character of `value` lies inside a span `find_secrets` returns; a partly redacted value is a miss."""
+    start = text.index(value)
+    spans = [(hit.start, hit.end) for hit in find_secrets(text)]
+    return all(any(s <= i < e for s, e in spans) for i in range(start, start + len(value)))
+
+
+def full_redaction_rates(templates: list[str], values: list[str]) -> dict[str, float]:
+    return {
+        template: sum(fully_redacted(template.format(v), v) for v in values) / len(values)
+        for template in templates
+    }
+
+
+def test_random_base64_with_slash_is_fully_redacted_in_env_lines() -> None:
+    """Per-character coverage, per embedding, of 2000 values. Measured: seed 20260930 98.55% for each embedding
+    but the `DB_<PASSWORD>=` line (100%, caught by the connstr pattern); seed 20261001 98.60% and 100%. The misses
+    (29 and 28 per embedding) are values that fail the base64 shape test; 10 of them are partly redacted, which
+    a `value not in sanitize(text)` check would count as redacted."""
     templates = [
         "AWS_SECRET_ACCESS_KEY={}",
         "export API_TOKEN={}",
         "- DB_" + PASSWORD_KEY.upper() + "={}",
         "{}",
     ]
-    texts = [(template.format(value), value) for value in values for template in templates]
-    fully_redacted = sum(value not in sanitize(text) for text, value in texts)
-    assert fully_redacted / len(texts) >= 0.99
+    rates = full_redaction_rates(templates, random_base64_with_slash(20260930))
+    assert min(rates.values()) >= 0.98, rates
 
 
 def test_high_entropy_segment_of_a_path_is_redacted_alone() -> None:
