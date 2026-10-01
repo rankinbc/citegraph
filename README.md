@@ -369,7 +369,10 @@ calibration change and every miss by cause.
 
 citegraph defends against accidental exposure of secrets and source code through an agent's context and logs: the
 index holds names and locations only, values that look like secrets are redacted on the way in and on the way out,
-and teams can add their own patterns in `citegraph.toml`. It does not sandbox the agent: pair it with your agent's
+and teams can add their own patterns in `citegraph.toml`. After every run, `citegraph index` scans the index's live
+text cells with the same rules and records the result; rows deleted by a change or by new redaction rules are zeroed,
+merged out of the search index and, on a rewrite, compacted out of the file. It does not sandbox the agent: pair it
+with your agent's
 permission rules. See [the design](docs/design.md), section 7. The leak scanner also ships as a pre-commit hook
 (`citegraph-leak-scan` in [.pre-commit-hooks.yaml](.pre-commit-hooks.yaml)).
 
