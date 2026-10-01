@@ -10,3 +10,4 @@ dist/
 *.scip
 *.scip.json
 eval/golden/*.candidates.yaml
+.superpowers/

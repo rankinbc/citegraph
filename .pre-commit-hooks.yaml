@@ -4,3 +4,4 @@
   entry: citegraph leak-scan --fail-on-findings
   language: python
   types: [text]
+  exclude: '(^|/)(uv\.lock|poetry\.lock|Pipfile\.lock|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock)$'

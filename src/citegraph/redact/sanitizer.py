@@ -7,9 +7,17 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from functools import lru_cache
+from itertools import pairwise
 from typing import cast
 
-from citegraph.redact.patterns import BUILTIN_PATTERNS, ENTROPY_THRESHOLD, ENTROPY_TOKEN, SecretPattern
+from citegraph.redact.patterns import (
+    BASE64_MIN_CLASS_CHANGE_RATE,
+    BUILTIN_PATTERNS,
+    ENTROPY_MIN_LENGTH,
+    ENTROPY_THRESHOLD,
+    ENTROPY_TOKEN,
+    SecretPattern,
+)
 
 _extra: tuple[SecretPattern, ...] = ()
 
@@ -41,6 +49,54 @@ def is_high_entropy(token: str) -> bool:
     )
 
 
+def _char_class(ch: str) -> str:
+    if ch.isupper():
+        return "upper"
+    if ch.islower():
+        return "lower"
+    return "digit" if ch.isdigit() else "symbol"
+
+
+def is_base64_shaped(token: str) -> bool:
+    """True when a token holding "/" reads as one base64 value rather than a path or URL.
+
+    - Standard base64 uses "+" and "/", the url-safe alphabet "-" and "_" in their place, so a token that
+      mixes "/" with "-" or "_" is not base64.
+    - Random base64 of 32 or more characters almost always has upper case, lower case and digits; hex and
+      lower-case folder names (hash directories, temp folders) do not.
+    - Random base64 changes character class between about two of every three adjacent characters
+      (0.65 expected); words and identifiers between path separators change far less often.
+    """
+    if "-" in token or "_" in token:
+        return False
+    if not (
+        any(c.isupper() for c in token)
+        and any(c.islower() for c in token)
+        and any(c.isdigit() for c in token)
+    ):
+        return False
+    pairs = [pair for segment in token.split("/") for pair in pairwise(segment)]
+    changes = sum(_char_class(a) != _char_class(b) for a, b in pairs)
+    return bool(pairs) and changes / len(pairs) >= BASE64_MIN_CLASS_CHANGE_RATE
+
+
+def _entropy_spans(token: str, start: int) -> list[tuple[int, int]]:
+    """High-entropy spans in one ENTROPY_TOKEN match starting at `start`.
+
+    A token without "/", or a base64-shaped one, is judged whole. Any other token holding "/" is a path or
+    URL: each segment is judged on its own, so digits in a folder or file name never redact the path while a
+    long random segment is still caught.
+    """
+    if is_high_entropy(token) and ("/" not in token or is_base64_shaped(token)):
+        return [(start, start + len(token))]
+    spans: list[tuple[int, int]] = []
+    for segment in token.split("/"):
+        if len(segment) >= ENTROPY_MIN_LENGTH and is_high_entropy(segment):
+            spans.append((start, start + len(segment)))
+        start += len(segment) + 1
+    return spans
+
+
 def find_secrets(text: str) -> list[SecretHit]:
     hits: list[SecretHit] = []
 
@@ -53,9 +109,9 @@ def find_secrets(text: str) -> list[SecretHit]:
             if not overlaps(start, end):
                 hits.append(SecretHit(pattern.kind, start, end))
     for match in ENTROPY_TOKEN.finditer(text):
-        start, end = match.span()
-        if is_high_entropy(match.group(0)) and not overlaps(start, end):
-            hits.append(SecretHit("high-entropy", start, end))
+        for start, end in _entropy_spans(match.group(0), match.start()):
+            if not overlaps(start, end):
+                hits.append(SecretHit("high-entropy", start, end))
     return sorted(hits, key=lambda h: h.start)
 
 

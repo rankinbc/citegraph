@@ -32,6 +32,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/citegraph"]
 
+[tool.hatch.build.targets.sdist]
+exclude = [".superpowers"]
+
 [tool.ruff]
 line-length = 110
 src = ["src", "tests"]

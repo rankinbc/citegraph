@@ -48,5 +48,12 @@ BUILTIN_PATTERNS: tuple[SecretPattern, ...] = (
 
 # Long tokens made of base64/url-safe characters. Hex (git shas, hashes) tops out at 4.0 bits
 # per character, so a threshold above 4.0 never flags them.
-ENTROPY_TOKEN = re.compile(r"[A-Za-z0-9+/=_\-]{32,}")
+ENTROPY_MIN_LENGTH = 32
+ENTROPY_TOKEN = re.compile(rf"[A-Za-z0-9+/=_\-]{{{ENTROPY_MIN_LENGTH},}}")
 ENTROPY_THRESHOLD = 4.2
+
+# A token holding "/" is judged whole only when it is base64-shaped; otherwise it is a path or URL and each
+# "/"-separated segment is judged on its own. Random base64 changes character class (upper, lower, digit,
+# symbol) between about two of every three adjacent characters; path segments are words and identifiers
+# and change far less often (sanitizer.is_base64_shaped).
+BASE64_MIN_CLASS_CHANGE_RATE = 0.45

@@ -94,7 +94,7 @@ Confidence per resolver rule against observed precision, over every edge returne
 `ambiguous` was 0.50 until the first run measured 0.17; it is now 0.15, below the default `min_confidence` of 0.5,
 so ambiguous edges are hidden unless a query lowers it. That value was fitted on the same edges it is checked on.
 
-![F1 by tool](eval/reports/2026-09-28/./f1_by_tool.svg) ![Calibration](eval/reports/2026-09-28/./calibration.svg)
+![F1 by tool](eval/reports/2026-09-28/f1_by_tool.svg) ![Calibration](eval/reports/2026-09-28/calibration.svg)
 
 ## Quickstart
 
