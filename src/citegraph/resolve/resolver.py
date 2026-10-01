@@ -9,6 +9,35 @@ from citegraph.resolve.graph import Graph, RefRow, Resolution, Sym, by_name, loa
 from citegraph.resolve.rules import CONFIDENCE
 from citegraph.store import EdgeRow, Store
 
+MAX_REEXPORT_HOPS = 3
+
+
+def _reexport(graph: Graph, qualified: str) -> str | None:
+    """`pkg.name.rest` -> `<target>.rest` when module `pkg` imports `name` from `<target>`, deepest module first."""
+    parts = qualified.split(".")
+    for k in range(len(parts) - 1, 0, -1):
+        for file_id in graph.module_files.get(".".join(parts[:k]), []):
+            target = graph.imports[file_id].get(parts[k])
+            if target is not None:
+                return ".".join([target, *parts[k + 1 :]])
+    return None
+
+
+def _lookup_python(graph: Graph, qualified: str, repo_id: int) -> Sym | None:
+    """A Python symbol by qualified name, following re-exports (`from .impl import work` in a package) up to
+    MAX_REEXPORT_HOPS times; a cycle or a name no module defines resolves to nothing."""
+    seen = {qualified}
+    for _ in range(MAX_REEXPORT_HOPS + 1):
+        hit = lookup(graph, qualified, repo_id, "python")
+        if hit is not None:
+            return hit
+        following = _reexport(graph, qualified)
+        if following is None or following in seen:
+            return None
+        seen.add(following)
+        qualified = following
+    return None
+
 
 def _resolve_call(graph: Graph, file_id: int, source: Sym, to_name: str) -> Resolution | None:
     repo_id = graph.file_repo[file_id]
@@ -30,14 +59,14 @@ def _resolve_call(graph: Graph, file_id: int, source: Sym, to_name: str) -> Reso
             return Resolution([hit], "same_file")
     imported = graph.imports[file_id].get(head)
     if imported is not None:
-        hit = lookup(graph, ".".join([imported, *rest]), repo_id, "python")
+        hit = _lookup_python(graph, ".".join([imported, *rest]), repo_id)
         return Resolution([hit], "import_scope") if hit is not None else None
     return by_name(graph, repo_id, parts[-1], "python")
 
 
 def _resolve_python(graph: Graph, ref: RefRow, source: Sym) -> Resolution | None:
     if ref.kind == "import":
-        hit = lookup(graph, ref.to_name, graph.file_repo[ref.file_id], "python")
+        hit = _lookup_python(graph, ref.to_name, graph.file_repo[ref.file_id])
         return Resolution([hit], "import_scope") if hit is not None else None
     return _resolve_call(graph, ref.file_id, source, ref.to_name)
 

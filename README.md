@@ -117,14 +117,14 @@ projects (flask and httpx), with answers labeled from a compiler-grade index:
 
 | question | citegraph F1 | grep F1 |
 |---|---|---|
-| what calls X | **0.73** | 0.69 |
+| what calls X | **0.78** | 0.69 |
 | what does X call | **0.84** | 0.58 |
 | where is config key K | 0.60 | **0.86** |
 
 citegraph wins on precision: grep finds every caller but buries them among look-alikes. Each rule's confidence is
 checked against its measured precision, and a subset of the eval runs in CI as a regression gate. Config keys are a
 known weak spot, and C# is not yet benchmarked. Details: [guide](docs/guide.md#accuracy-and-evaluation),
-[eval report](eval/reports/2026-09-28/report.md).
+[eval report](eval/reports/2026-10-01/report.md).
 
 ## Safe to leave connected
 

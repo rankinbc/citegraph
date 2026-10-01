@@ -161,24 +161,24 @@ Queries hide edges below `min_confidence` (default 0.5) and say how many they hi
 
 A deterministic eval asks citegraph and a grep baseline the same 50 questions (20 `what_calls`, 20
 `what_does_it_call`, 5 `find_config_key`, 5 `find_path`) about flask 3.1.3 and httpx 0.28.1, 35.6k lines of Python
-pinned in [eval/corpus.yaml](../eval/corpus.yaml). Full numbers: [report](../eval/reports/2026-09-28/report.md) and
-[analysis](../eval/reports/2026-09-28/analysis.md).
+pinned in [eval/corpus.yaml](../eval/corpus.yaml). Full numbers: [report](../eval/reports/2026-10-01/report.md) and
+[analysis](../eval/reports/2026-10-01/analysis.md).
 
 | tool | questions | citegraph F1 | grep F1 | margin | citegraph P / R | grep P / R |
 |---|---|---|---|---|---|---|
-| `what_calls` | 20 | 0.73 | 0.69 | +0.04 | 0.80 / 0.70 | 0.63 / 1.00 |
+| `what_calls` | 20 | 0.78 | 0.69 | +0.09 | 0.85 / 0.75 | 0.63 / 1.00 |
 | `what_does_it_call` | 20 | 0.84 | 0.58 | +0.26 | 0.88 / 0.84 | 0.50 / 1.00 |
 | `find_config_key` | 5 | 0.60 | 0.86 | -0.26 | 1.00 / 0.46 | 0.78 / 0.98 |
 | `find_path` | 5 | 0.60 | n/a | n/a | 0.60 / 0.60 | n/a |
 
 - **Callees: a clear win.** citegraph scores higher on 11 questions, grep on 2, and 7 tie.
-- **Callers: a narrow win.** citegraph scores higher on 6, grep on 5, and 9 tie.
+- **Callers: a narrow win.** citegraph scores higher on 7, grep on 4, and 9 tie.
 - **Config keys: grep wins.** citegraph's config extractor misses several ways Python code sets and checks keys
   (see [Limitations](#limitations)).
 - **Where the lead comes from.** Grep's recall is 1.00 on both call tools; citegraph's advantage is precision, and
   every call question it loses is a recall miss. That trade is the point: an agent reading 5 correct callers instead
   of 21 candidates spends less context and gets the right answer.
-- **Speed.** Tool latency is p50 0.5 ms and p95 4.3 ms, timed in-process around the query call (not an MCP round
+- **Speed.** Tool latency is p50 0.3 ms and p95 2.5 ms, timed in-process around the query call (not an MCP round
   trip).
 
 Confidence is calibrated: each resolver rule's nominal confidence is checked against its observed precision.
@@ -186,14 +186,14 @@ Confidence is calibrated: each resolver rule's nominal confidence is checked aga
 | rule | nominal confidence | observed precision | edges |
 |---|---|---|---|
 | `same_file` | 0.95 | 1.00 | 26 |
-| `import_scope` | 0.90 | 1.00 | 17 |
+| `import_scope` | 0.90 | 1.00 | 34 |
 | `repo_unique` | 0.70 | 0.60 | 5 |
 | `ambiguous` | 0.15 | 0.17 | 82 |
 
 `ambiguous` started at 0.50; the first run measured 0.17, so it is now 0.15, below the default `min_confidence` of
 0.5.
 
-![F1 by tool](../eval/reports/2026-09-28/f1_by_tool.svg) ![Calibration](../eval/reports/2026-09-28/calibration.svg)
+![F1 by tool](../eval/reports/2026-10-01/f1_by_tool.svg) ![Calibration](../eval/reports/2026-10-01/calibration.svg)
 
 ### Method
 
@@ -260,8 +260,6 @@ The leak scanner also ships as a pre-commit hook (`citegraph-leak-scan` in
   Imports into packages nested deeper, such as a monorepo's `services/<name>/<pkg>/` or a `backend/app/` layout,
   resolve only when the import path matches that full path; finding package roots from `pyproject.toml` or
   `__init__.py` is planned.
-- **Re-exports are not followed.** `from flask import Response` does not reach `flask.wrappers.Response`, so one eval
-  question misses all 15 callers.
 - **Stoplist and candidate cap.** Common names (`close`, `add`, and in C# `Add`, `ToString`, `ToListAsync` and
   similar), dunders such as `super().__init__()`, and names with more than 10 definitions are never matched by name
   alone; unless an import or the same file settles them, they stay unresolved rather than produce noise.

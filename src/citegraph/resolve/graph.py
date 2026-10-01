@@ -59,6 +59,7 @@ class Graph:
     file_repo: dict[int, int] = field(default_factory=dict[int, int])
     file_lang: dict[int, str] = field(default_factory=dict[int, str])
     file_module: dict[int, str] = field(default_factory=dict[int, str])
+    module_files: dict[str, list[int]] = field(default_factory=lambda: defaultdict(list))
     file_syms: dict[int, dict[str, Sym]] = field(default_factory=lambda: defaultdict(dict))
     imports: dict[int, dict[str, str]] = field(default_factory=lambda: defaultdict(dict))
     cs_imports: dict[int, CsImports] = field(default_factory=lambda: defaultdict(CsImports))
@@ -71,6 +72,8 @@ def load_graph(store: Store) -> Graph:
         graph.file_repo[int(row["id"])] = int(row["repo_id"])
         graph.file_lang[int(row["id"])] = str(row["lang"])
         graph.file_module[int(row["id"])] = str(row["module"] or "")
+        if row["lang"] == "python":
+            graph.module_files[str(row["module"] or "")].append(int(row["id"]))
     sql = (
         "SELECT s.id, s.file_id, f.repo_id, f.lang, s.kind, s.name, s.qualified_name "
         "FROM symbols s JOIN files f ON f.id = s.file_id ORDER BY s.id"

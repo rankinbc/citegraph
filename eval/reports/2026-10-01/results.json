@@ -1,0 +1,1864 @@
+{
+  "questions": [
+    {
+      "id": "py-what_calls-flask-1",
+      "tool": "what_calls",
+      "expected": [
+        "flask:tests.test_json.test_json_dump_to_file"
+      ],
+      "citegraph": [
+        "flask:tests.test_json.test_json_dump_to_file"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.cli.FlaskGroup._load_plugin_commands",
+        "flask:flask.config.Config.from_file",
+        "flask:flask.json.load",
+        "flask:tests.test_json.test_json_dump_to_file",
+        "httpx:tests.models.test_whatwg"
+      ],
+      "baseline_score": {
+        "precision": 0.2,
+        "recall": 1.0,
+        "f1": 0.33333333333333337
+      },
+      "latency_ms": 30.89409996755421
+    },
+    {
+      "id": "py-what_calls-flask-2",
+      "tool": "what_calls",
+      "expected": [
+        "flask:flask.cli.AppGroup.command.decorator"
+      ],
+      "citegraph": [
+        "flask:flask.cli.AppGroup.command.decorator"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.cli.AppGroup.command.decorator"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.32210000790655613
+    },
+    {
+      "id": "py-what_calls-flask-3",
+      "tool": "what_calls",
+      "expected": [
+        "flask:tests.test_blueprints.test_route_decorator_custom_endpoint_with_dots"
+      ],
+      "citegraph": [],
+      "citegraph_score": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "baseline": [
+        "flask:examples.tutorial.flaskr.create_app",
+        "flask:flask.app.Flask.__init__",
+        "flask:flask.sansio.blueprints.Blueprint.add_url_rule",
+        "flask:flask.sansio.blueprints.Blueprint.register",
+        "flask:flask.sansio.blueprints.BlueprintSetupState.add_url_rule",
+        "flask:flask.sansio.scaffold.Scaffold.add_url_rule",
+        "flask:flask.sansio.scaffold.Scaffold.endpoint",
+        "flask:flask.sansio.scaffold.Scaffold.route.decorator",
+        "flask:flask.views.MethodView",
+        "flask:flask.views.View",
+        "flask:tests.test_async._async_app",
+        "flask:tests.test_basic.test_disallow_string_for_allowed_methods",
+        "flask:tests.test_basic.test_multi_route_class_views.View.__init__",
+        "flask:tests.test_basic.test_no_setup_after_first_request",
+        "flask:tests.test_basic.test_provide_automatic_options_kwarg",
+        "flask:tests.test_basic.test_url_mapping",
+        "flask:tests.test_blueprints.test_route_decorator_custom_endpoint_with_dots",
+        "flask:tests.test_cli.TestRoutes.app",
+        "flask:tests.test_cli.TestRoutes.test_host",
+        "flask:tests.test_cli.TestRoutes.test_subdomain",
+        "flask:tests.test_helpers.TestUrlFor.test_url_for_with_scheme_not_external",
+        "flask:tests.test_helpers.TestUrlFor.test_url_with_method",
+        "flask:tests.test_json.test_jsonify_basic_types",
+        "flask:tests.test_json.test_jsonify_uuid_types",
+        "flask:tests.test_views.test_basic_view",
+        "flask:tests.test_views.test_endpoint_override",
+        "flask:tests.test_views.test_explicit_head",
+        "flask:tests.test_views.test_implicit_head",
+        "flask:tests.test_views.test_init_once",
+        "flask:tests.test_views.test_method_based_view",
+        "flask:tests.test_views.test_methods_var_inheritance",
+        "flask:tests.test_views.test_multiple_inheritance",
+        "flask:tests.test_views.test_remove_method_from_parent",
+        "flask:tests.test_views.test_view_decorators",
+        "flask:tests.test_views.test_view_inheritance",
+        "flask:tests.test_views.test_view_patching",
+        "flask:tests.test_views.test_view_provide_automatic_options_attr",
+        "flask:tests.type_check.typing_route"
+      ],
+      "baseline_score": {
+        "precision": 0.02631578947368421,
+        "recall": 1.0,
+        "f1": 0.05128205128205127
+      },
+      "latency_ms": 2.544799994211644
+    },
+    {
+      "id": "py-what_calls-flask-4",
+      "tool": "what_calls",
+      "expected": [
+        "flask:flask.json.tag.TaggedJSONSerializer.__init__",
+        "flask:tests.test_json_tag.test_custom_tag",
+        "flask:tests.test_json_tag.test_duplicate_tag",
+        "flask:tests.test_json_tag.test_tag_order"
+      ],
+      "citegraph": [
+        "flask:flask.json.tag.TaggedJSONSerializer.__init__"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4
+      },
+      "baseline": [
+        "flask:flask.json.tag",
+        "flask:flask.json.tag.TaggedJSONSerializer.__init__",
+        "flask:flask.sansio.app.App.register_blueprint",
+        "flask:flask.sansio.blueprints.Blueprint.register",
+        "flask:tests.test_json_tag.test_custom_tag",
+        "flask:tests.test_json_tag.test_duplicate_tag",
+        "flask:tests.test_json_tag.test_tag_order",
+        "flask:tests.test_logging.reset_logging"
+      ],
+      "baseline_score": {
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666
+      },
+      "latency_ms": 1.090700039640069
+    },
+    {
+      "id": "py-what_calls-flask-5",
+      "tool": "what_calls",
+      "expected": [
+        "flask:flask.sansio.app.App.__init__"
+      ],
+      "citegraph": [
+        "flask:flask.sansio.app.App.__init__"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.sansio.app.App.__init__"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.2916999510489404
+    },
+    {
+      "id": "py-what_calls-flask-6",
+      "tool": "what_calls",
+      "expected": [
+        "flask:flask.json.tag.TaggedJSONSerializer.tag"
+      ],
+      "citegraph": [],
+      "citegraph_score": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "baseline": [
+        "flask:flask.json.tag.TaggedJSONSerializer.tag"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.2243000199086964
+    },
+    {
+      "id": "py-what_calls-flask-7",
+      "tool": "what_calls",
+      "expected": [
+        "flask:flask.json.tag.TaggedJSONSerializer.loads",
+        "flask:tests.test_json.test_jsonify_arrays",
+        "flask:tests.test_json.test_jsonify_basic_types",
+        "flask:tests.test_json.test_jsonify_dicts",
+        "flask:tests.test_json.test_jsonify_uuid_types"
+      ],
+      "citegraph": [
+        "flask:flask.json.tag.TaggedJSONSerializer.loads",
+        "flask:tests.test_json.test_jsonify_arrays",
+        "flask:tests.test_json.test_jsonify_basic_types",
+        "flask:tests.test_json.test_jsonify_dicts",
+        "flask:tests.test_json.test_jsonify_uuid_types"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.config.Config.from_prefixed_env",
+        "flask:flask.json.loads",
+        "flask:flask.json.provider.DefaultJSONProvider.loads",
+        "flask:flask.json.provider.JSONProvider.load",
+        "flask:flask.json.tag.TaggedJSONSerializer.loads",
+        "flask:flask.sessions.SecureCookieSessionInterface.open_session",
+        "flask:tests.test_basic.test_json_dump_dataclass",
+        "flask:tests.test_json.test_json_customization.CustomProvider.loads",
+        "flask:tests.test_json.test_jsonify_arrays",
+        "flask:tests.test_json.test_jsonify_basic_types",
+        "flask:tests.test_json.test_jsonify_dicts",
+        "flask:tests.test_json.test_jsonify_uuid_types",
+        "flask:tests.test_json_tag.test_custom_tag",
+        "flask:tests.test_json_tag.test_dump_load_unchanged",
+        "httpx:httpx._main.validate_json",
+        "httpx:httpx._models.Response.json",
+        "httpx:tests.models.test_requests.test_request_async_streaming_content_picklable",
+        "httpx:tests.models.test_requests.test_request_generator_content_picklable",
+        "httpx:tests.models.test_requests.test_request_picklable",
+        "httpx:tests.models.test_responses.test_response_async_streaming_picklable",
+        "httpx:tests.models.test_responses.test_response_picklable"
+      ],
+      "baseline_score": {
+        "precision": 0.23809523809523808,
+        "recall": 1.0,
+        "f1": 0.3846153846153846
+      },
+      "latency_ms": 0.665400002617389
+    },
+    {
+      "id": "py-what_calls-flask-8",
+      "tool": "what_calls",
+      "expected": [
+        "flask:flask.json.dumps",
+        "flask:flask.json.provider.JSONProvider.dump",
+        "flask:flask.json.provider.JSONProvider.response",
+        "flask:flask.testing.EnvironBuilder.json_dumps",
+        "flask:tests.test_basic.test_json_dump_dataclass",
+        "flask:tests.test_json.test_json_as_unicode"
+      ],
+      "citegraph": [
+        "flask:flask.json.provider.JSONProvider.dump",
+        "flask:flask.json.provider.JSONProvider.response"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      },
+      "baseline": [
+        "flask:flask.json.dumps",
+        "flask:flask.json.provider.DefaultJSONProvider.dumps",
+        "flask:flask.json.provider.DefaultJSONProvider.response",
+        "flask:flask.json.provider.JSONProvider.dump",
+        "flask:flask.json.provider.JSONProvider.response",
+        "flask:flask.json.tag.TaggedJSONSerializer.dumps",
+        "flask:flask.sessions.SecureCookieSessionInterface.save_session",
+        "flask:flask.testing.EnvironBuilder.json_dumps",
+        "flask:tests.test_basic.test_json_dump_dataclass",
+        "flask:tests.test_json.test_html_method",
+        "flask:tests.test_json.test_json_as_unicode",
+        "flask:tests.test_json.test_json_attr",
+        "flask:tests.test_json.test_json_customization",
+        "flask:tests.test_json.test_json_customization.index",
+        "flask:tests.test_json.test_json_decimal",
+        "flask:tests.test_json.test_jsonify_aware_datetimes",
+        "flask:tests.test_json_tag.test_custom_tag",
+        "flask:tests.test_json_tag.test_dump_load_unchanged",
+        "httpx:httpx._main.print_response",
+        "httpx:tests.conftest.echo_headers",
+        "httpx:tests.models.test_requests.test_request_async_streaming_content_picklable",
+        "httpx:tests.models.test_requests.test_request_generator_content_picklable",
+        "httpx:tests.models.test_requests.test_request_picklable",
+        "httpx:tests.models.test_responses.test_json_with_options",
+        "httpx:tests.models.test_responses.test_json_with_specified_charset",
+        "httpx:tests.models.test_responses.test_json_with_specified_encoding",
+        "httpx:tests.models.test_responses.test_json_without_specified_charset",
+        "httpx:tests.models.test_responses.test_response_async_streaming_picklable",
+        "httpx:tests.models.test_responses.test_response_picklable",
+        "httpx:tests.test_asgi.echo_headers",
+        "httpx:tests.test_asgi.echo_path",
+        "httpx:tests.test_asgi.echo_raw_path"
+      ],
+      "baseline_score": {
+        "precision": 0.1875,
+        "recall": 1.0,
+        "f1": 0.3157894736842105
+      },
+      "latency_ms": 0.5355000030249357
+    },
+    {
+      "id": "py-what_calls-flask-9",
+      "tool": "what_calls",
+      "expected": [
+        "flask:flask.app.Flask"
+      ],
+      "citegraph": [
+        "flask:flask.app.Flask"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.app.Flask"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.40550000267103314
+    },
+    {
+      "id": "py-what_calls-flask-10",
+      "tool": "what_calls",
+      "expected": [
+        "flask:tests.test_basic.test_make_response_with_response_instance",
+        "flask:tests.test_basic.test_max_cookie_size",
+        "flask:tests.test_basic.test_max_cookie_size.index",
+        "flask:tests.test_basic.test_response_types.from_response_headers",
+        "flask:tests.test_basic.test_session_vary_cookie.vary_cookie_header_set",
+        "flask:tests.test_basic.test_session_vary_cookie.vary_header_set",
+        "flask:tests.test_helpers.TestStreaming.test_async_view.index",
+        "flask:tests.test_helpers.TestStreaming.test_stream_keeps_session.index",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context.index",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context_and_custom_close.index",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context_as_decorator.index",
+        "flask:tests.test_views.test_explicit_head.Index.head",
+        "flask:tests.test_views.test_implicit_head.Index.get",
+        "flask:tests.type_check.typing_app_decorators.after_async",
+        "flask:tests.type_check.typing_app_decorators.after_sync"
+      ],
+      "citegraph": [
+        "flask:tests.test_basic.test_make_response_with_response_instance",
+        "flask:tests.test_basic.test_max_cookie_size",
+        "flask:tests.test_basic.test_max_cookie_size.index",
+        "flask:tests.test_basic.test_response_types.from_response_headers",
+        "flask:tests.test_basic.test_session_vary_cookie.vary_cookie_header_set",
+        "flask:tests.test_basic.test_session_vary_cookie.vary_header_set",
+        "flask:tests.test_helpers.TestStreaming.test_async_view.index",
+        "flask:tests.test_helpers.TestStreaming.test_stream_keeps_session.index",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context.index",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context_and_custom_close.index",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context_as_decorator.index",
+        "flask:tests.test_views.test_explicit_head.Index.head",
+        "flask:tests.test_views.test_implicit_head.Index.get",
+        "flask:tests.type_check.typing_app_decorators.after_async",
+        "flask:tests.type_check.typing_app_decorators.after_sync"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.helpers.stream_with_context",
+        "flask:tests.test_basic.test_make_response_with_response_instance",
+        "flask:tests.test_basic.test_max_cookie_size",
+        "flask:tests.test_basic.test_max_cookie_size.index",
+        "flask:tests.test_basic.test_response_types.from_response_headers",
+        "flask:tests.test_basic.test_session_vary_cookie.vary_cookie_header_set",
+        "flask:tests.test_basic.test_session_vary_cookie.vary_header_set",
+        "flask:tests.test_helpers.TestStreaming.test_async_view.index",
+        "flask:tests.test_helpers.TestStreaming.test_stream_keeps_session.index",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context.index",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context_and_custom_close.index",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context_as_decorator.index",
+        "flask:tests.test_views.test_explicit_head.Index.head",
+        "flask:tests.test_views.test_implicit_head.Index.get",
+        "flask:tests.type_check.typing_app_decorators.after_async",
+        "flask:tests.type_check.typing_app_decorators.after_sync",
+        "httpx:httpx._models.Response.__init__",
+        "httpx:httpx._transports.asgi.ASGITransport.handle_async_request",
+        "httpx:httpx._transports.default.AsyncHTTPTransport.handle_async_request",
+        "httpx:httpx._transports.default.HTTPTransport.handle_request",
+        "httpx:httpx._transports.wsgi.WSGITransport.handle_request",
+        "httpx:tests.client.test_async_client.hello_world",
+        "httpx:tests.client.test_async_client.mounted",
+        "httpx:tests.client.test_async_client.test_async_mock_transport.hello_world",
+        "httpx:tests.client.test_async_client.test_cancellation_during_stream.response_with_cancel_during_stream",
+        "httpx:tests.client.test_async_client.unmounted",
+        "httpx:tests.client.test_auth.App.__call__",
+        "httpx:tests.client.test_auth.DigestApp.__call__",
+        "httpx:tests.client.test_auth.DigestApp.challenge_send",
+        "httpx:tests.client.test_client.echo_raw_headers",
+        "httpx:tests.client.test_client.hello_world",
+        "httpx:tests.client.test_client.mounted",
+        "httpx:tests.client.test_client.test_client_decode_text_using_autodetect.cp1252_but_no_content_type",
+        "httpx:tests.client.test_client.test_client_decode_text_using_explicit_encoding.cp1252_but_no_content_type",
+        "httpx:tests.client.test_client.unmounted",
+        "httpx:tests.client.test_cookies.get_and_set_cookies",
+        "httpx:tests.client.test_event_hooks.app",
+        "httpx:tests.client.test_headers.echo_headers",
+        "httpx:tests.client.test_headers.echo_repeated_headers_items",
+        "httpx:tests.client.test_headers.echo_repeated_headers_multi_items",
+        "httpx:tests.client.test_queryparams.hello_world",
+        "httpx:tests.client.test_redirects.cookie_sessions",
+        "httpx:tests.client.test_redirects.redirects",
+        "httpx:tests.models.test_cookies.test_multiple_set_cookie",
+        "httpx:tests.models.test_headers.test_parse_header_links",
+        "httpx:tests.models.test_headers.test_parse_header_links_no_link",
+        "httpx:tests.models.test_responses.test_aclose_on_sync",
+        "httpx:tests.models.test_responses.test_aiter_bytes",
+        "httpx:tests.models.test_responses.test_aiter_bytes_with_chunk_size",
+        "httpx:tests.models.test_responses.test_aiter_lines",
+        "httpx:tests.models.test_responses.test_aiter_raw",
+        "httpx:tests.models.test_responses.test_aiter_raw_increments_updates_counter",
+        "httpx:tests.models.test_responses.test_aiter_raw_on_sync",
+        "httpx:tests.models.test_responses.test_aiter_raw_with_chunksize",
+        "httpx:tests.models.test_responses.test_aiter_text",
+        "httpx:tests.models.test_responses.test_aiter_text_with_chunk_size",
+        "httpx:tests.models.test_responses.test_aread",
+        "httpx:tests.models.test_responses.test_async_streaming_response",
+        "httpx:tests.models.test_responses.test_cannot_access_unset_request",
+        "httpx:tests.models.test_responses.test_cannot_aread_after_response_closed",
+        "httpx:tests.models.test_responses.test_cannot_aread_after_stream_consumed",
+        "httpx:tests.models.test_responses.test_cannot_read_after_response_closed",
+        "httpx:tests.models.test_responses.test_cannot_read_after_stream_consumed",
+        "httpx:tests.models.test_responses.test_close_on_async",
+        "httpx:tests.models.test_responses.test_decode_error_with_request",
+        "httpx:tests.models.test_responses.test_elapsed_not_available_until_closed",
+        "httpx:tests.models.test_responses.test_empty_aread",
+        "httpx:tests.models.test_responses.test_empty_read",
+        "httpx:tests.models.test_responses.test_generator_with_content_length_header",
+        "httpx:tests.models.test_responses.test_generator_with_transfer_encoding_header",
+        "httpx:tests.models.test_responses.test_iter_bytes",
+        "httpx:tests.models.test_responses.test_iter_bytes_doesnt_return_empty_chunks",
+        "httpx:tests.models.test_responses.test_iter_bytes_with_chunk_size",
+        "httpx:tests.models.test_responses.test_iter_bytes_with_empty_response",
+        "httpx:tests.models.test_responses.test_iter_lines",
+        "httpx:tests.models.test_responses.test_iter_raw",
+        "httpx:tests.models.test_responses.test_iter_raw_doesnt_return_empty_chunks",
+        "httpx:tests.models.test_responses.test_iter_raw_increments_updates_counter",
+        "httpx:tests.models.test_responses.test_iter_raw_on_async",
+        "httpx:tests.models.test_responses.test_iter_raw_on_iterable",
+        "httpx:tests.models.test_responses.test_iter_raw_with_chunksize",
+        "httpx:tests.models.test_responses.test_iter_text",
+        "httpx:tests.models.test_responses.test_iter_text_with_chunk_size",
+        "httpx:tests.models.test_responses.test_json_with_options",
+        "httpx:tests.models.test_responses.test_json_with_specified_charset",
+        "httpx:tests.models.test_responses.test_json_with_specified_encoding",
+        "httpx:tests.models.test_responses.test_json_without_specified_charset",
+        "httpx:tests.models.test_responses.test_link_headers",
+        "httpx:tests.models.test_responses.test_raise_for_status",
+        "httpx:tests.models.test_responses.test_read",
+        "httpx:tests.models.test_responses.test_response",
+        "httpx:tests.models.test_responses.test_response_async_streaming_picklable",
+        "httpx:tests.models.test_responses.test_response_content",
+        "httpx:tests.models.test_responses.test_response_content_type_encoding",
+        "httpx:tests.models.test_responses.test_response_decode_text_using_autodetect",
+        "httpx:tests.models.test_responses.test_response_decode_text_using_explicit_encoding",
+        "httpx:tests.models.test_responses.test_response_default_to_utf8_encoding",
+        "httpx:tests.models.test_responses.test_response_fallback_to_utf8_encoding",
+        "httpx:tests.models.test_responses.test_response_force_encoding",
+        "httpx:tests.models.test_responses.test_response_force_encoding_after_text_accessed",
+        "httpx:tests.models.test_responses.test_response_html",
+        "httpx:tests.models.test_responses.test_response_json",
+        "httpx:tests.models.test_responses.test_response_no_charset_with_ascii_content",
+        "httpx:tests.models.test_responses.test_response_no_charset_with_cp_1252_content",
+        "httpx:tests.models.test_responses.test_response_no_charset_with_iso_8859_1_content",
+        "httpx:tests.models.test_responses.test_response_no_charset_with_utf8_content",
+        "httpx:tests.models.test_responses.test_response_non_text_encoding",
+        "httpx:tests.models.test_responses.test_response_picklable",
+        "httpx:tests.models.test_responses.test_response_repr",
+        "httpx:tests.models.test_responses.test_response_set_explicit_encoding",
+        "httpx:tests.models.test_responses.test_response_text",
+        "httpx:tests.models.test_responses.test_response_with_unset_request",
+        "httpx:tests.models.test_responses.test_set_request_after_init",
+        "httpx:tests.models.test_responses.test_sync_streaming_response",
+        "httpx:tests.models.test_responses.test_unknown_status_code",
+        "httpx:tests.models.test_responses.test_value_error_without_request",
+        "httpx:tests.test_auth.set_cookies",
+        "httpx:tests.test_auth.test_basic_auth",
+        "httpx:tests.test_auth.test_digest_auth_rfc_2069",
+        "httpx:tests.test_auth.test_digest_auth_rfc_7616_md5",
+        "httpx:tests.test_auth.test_digest_auth_rfc_7616_sha_256",
+        "httpx:tests.test_auth.test_digest_auth_setting_cookie_in_request",
+        "httpx:tests.test_auth.test_digest_auth_with_200",
+        "httpx:tests.test_auth.test_digest_auth_with_401",
+        "httpx:tests.test_auth.test_digest_auth_with_401_nonce_counting",
+        "httpx:tests.test_content.test_allow_nan_false",
+        "httpx:tests.test_content.test_ensure_ascii_false_with_french_characters",
+        "httpx:tests.test_content.test_response_aiterator_content",
+        "httpx:tests.test_content.test_response_bytes_content",
+        "httpx:tests.test_content.test_response_empty_content",
+        "httpx:tests.test_content.test_response_invalid_argument",
+        "httpx:tests.test_content.test_response_iterator_content",
+        "httpx:tests.test_content.test_separators_for_compact_json",
+        "httpx:tests.test_decoders.test_brotli",
+        "httpx:tests.test_decoders.test_decoders_empty_cases",
+        "httpx:tests.test_decoders.test_decoding_errors",
+        "httpx:tests.test_decoders.test_deflate",
+        "httpx:tests.test_decoders.test_empty_content",
+        "httpx:tests.test_decoders.test_gzip",
+        "httpx:tests.test_decoders.test_invalid_content_encoding_header",
+        "httpx:tests.test_decoders.test_line_decoder_cr",
+        "httpx:tests.test_decoders.test_line_decoder_crnl",
+        "httpx:tests.test_decoders.test_line_decoder_nl",
+        "httpx:tests.test_decoders.test_multi",
+        "httpx:tests.test_decoders.test_multi_with_identity",
+        "httpx:tests.test_decoders.test_streaming",
+        "httpx:tests.test_decoders.test_streaming_text_decoder",
+        "httpx:tests.test_decoders.test_text_decoder_empty_cases",
+        "httpx:tests.test_decoders.test_text_decoder_known_encoding",
+        "httpx:tests.test_decoders.test_text_decoder_with_autodetect",
+        "httpx:tests.test_decoders.test_zlib",
+        "httpx:tests.test_decoders.test_zstd",
+        "httpx:tests.test_decoders.test_zstd_decoding_error",
+        "httpx:tests.test_decoders.test_zstd_empty",
+        "httpx:tests.test_decoders.test_zstd_multiframe",
+        "httpx:tests.test_decoders.test_zstd_truncated",
+        "httpx:tests.test_multipart.echo_request_content",
+        "httpx:tests.test_utils.test_bad_utf_like_encoding",
+        "httpx:tests.test_utils.test_encoded",
+        "httpx:tests.test_utils.test_guess_by_bom"
+      ],
+      "baseline_score": {
+        "precision": 0.09375,
+        "recall": 1.0,
+        "f1": 0.17142857142857143
+      },
+      "latency_ms": 0.726599944755435
+    },
+    {
+      "id": "py-what_calls-httpx-1",
+      "tool": "what_calls",
+      "expected": [
+        "httpx:httpx._client.Client.close",
+        "httpx:httpx._transports.base.BaseTransport.__exit__"
+      ],
+      "citegraph": [
+        "httpx:httpx._transports.base.BaseTransport.__exit__"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      },
+      "baseline": [
+        "flask:examples.tutorial.flaskr.db.close_db",
+        "flask:examples.tutorial.tests.conftest.app",
+        "flask:flask.app.Flask.test_request_context",
+        "flask:flask.helpers.stream_with_context.generator",
+        "flask:flask.testing.FlaskClient.__exit__",
+        "flask:flask.testing.FlaskClient._request_from_builder_args",
+        "flask:flask.testing.FlaskClient.open",
+        "flask:tests.test_basic.test_static_files",
+        "flask:tests.test_basic.test_static_folder_with_pathlib_path",
+        "flask:tests.test_basic.test_static_route_with_host_matching",
+        "flask:tests.test_basic.test_static_url_empty_path",
+        "flask:tests.test_basic.test_static_url_empty_path_default",
+        "flask:tests.test_basic.test_static_url_path",
+        "flask:tests.test_basic.test_static_url_path_with_ending_slash",
+        "flask:tests.test_blueprints.test_default_static_max_age",
+        "flask:tests.test_blueprints.test_templates_and_static",
+        "flask:tests.test_helpers.TestSendfile.test_send_file",
+        "flask:tests.test_helpers.TestSendfile.test_send_from_directory",
+        "flask:tests.test_helpers.TestSendfile.test_static_file",
+        "flask:tests.test_helpers.TestStreaming.test_async_view",
+        "flask:tests.test_testing.test_client_pop_all_preserved",
+        "httpx:httpx._client.BoundSyncStream.close",
+        "httpx:httpx._client.Client._send_handling_auth",
+        "httpx:httpx._client.Client._send_handling_redirects",
+        "httpx:httpx._client.Client.close",
+        "httpx:httpx._client.Client.send",
+        "httpx:httpx._client.Client.stream",
+        "httpx:httpx._client.ClientState",
+        "httpx:httpx._models.Response.close",
+        "httpx:httpx._models.Response.iter_raw",
+        "httpx:httpx._transports.base.BaseTransport.__exit__",
+        "httpx:httpx._transports.default.HTTPTransport.close",
+        "httpx:httpx._transports.default.ResponseStream.close",
+        "httpx:tests.client.test_client.test_client_closed_state_using_implicit_open",
+        "httpx:tests.client.test_proxies.test_sync_proxy_close",
+        "httpx:tests.models.test_responses.test_cannot_read_after_response_closed",
+        "httpx:tests.models.test_responses.test_close_on_async"
+      ],
+      "baseline_score": {
+        "precision": 0.05405405405405406,
+        "recall": 1.0,
+        "f1": 0.10256410256410257
+      },
+      "latency_ms": 32.52260002773255
+    },
+    {
+      "id": "py-what_calls-httpx-2",
+      "tool": "what_calls",
+      "expected": [
+        "httpx:httpx._client.BaseClient.build_request"
+      ],
+      "citegraph": [
+        "httpx:httpx._client.BaseClient.build_request"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._client.BaseClient.build_request"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.42719999328255653
+    },
+    {
+      "id": "py-what_calls-httpx-3",
+      "tool": "what_calls",
+      "expected": [
+        "httpx:httpx._transports.default.map_httpcore_exceptions"
+      ],
+      "citegraph": [
+        "httpx:httpx._transports.default.map_httpcore_exceptions"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._transports.default.map_httpcore_exceptions"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.3223000094294548
+    },
+    {
+      "id": "py-what_calls-httpx-4",
+      "tool": "what_calls",
+      "expected": [
+        "httpx:httpx._content.encode_request",
+        "httpx:httpx._content.encode_response"
+      ],
+      "citegraph": [
+        "httpx:httpx._content.encode_request",
+        "httpx:httpx._content.encode_response"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._content.encode_request",
+        "httpx:httpx._content.encode_response"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.5725999944843352
+    },
+    {
+      "id": "py-what_calls-httpx-5",
+      "tool": "what_calls",
+      "expected": [
+        "httpx:httpx._auth.Auth.async_auth_flow",
+        "httpx:httpx._auth.Auth.sync_auth_flow"
+      ],
+      "citegraph": [
+        "httpx:httpx._auth.Auth.async_auth_flow",
+        "httpx:httpx._auth.Auth.sync_auth_flow"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._auth.Auth",
+        "httpx:httpx._auth.Auth.async_auth_flow",
+        "httpx:httpx._auth.Auth.sync_auth_flow"
+      ],
+      "baseline_score": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "f1": 0.8
+      },
+      "latency_ms": 0.3473000251688063
+    },
+    {
+      "id": "py-what_calls-httpx-6",
+      "tool": "what_calls",
+      "expected": [
+        "httpx:httpx._content.encode_response"
+      ],
+      "citegraph": [
+        "httpx:httpx._content.encode_response"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._content.encode_response"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.5256999866105616
+    },
+    {
+      "id": "py-what_calls-httpx-7",
+      "tool": "what_calls",
+      "expected": [
+        "httpx:httpx._auth.NetRCAuth.auth_flow"
+      ],
+      "citegraph": [
+        "httpx:httpx._auth.NetRCAuth.auth_flow"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._auth.BasicAuth.__init__",
+        "httpx:httpx._auth.DigestAuth.auth_flow",
+        "httpx:httpx._auth.NetRCAuth.auth_flow"
+      ],
+      "baseline_score": {
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "f1": 0.5
+      },
+      "latency_ms": 0.25430001551285386
+    },
+    {
+      "id": "py-what_calls-httpx-8",
+      "tool": "what_calls",
+      "expected": [
+        "httpx:tests.client.test_client.test_patch"
+      ],
+      "citegraph": [],
+      "citegraph_score": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "baseline": [
+        "httpx:tests.client.test_async_client.test_patch",
+        "httpx:tests.client.test_client.test_patch",
+        "httpx:tests.test_api.test_patch"
+      ],
+      "baseline_score": {
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "f1": 0.5
+      },
+      "latency_ms": 0.345399952493608
+    },
+    {
+      "id": "py-what_calls-httpx-9",
+      "tool": "what_calls",
+      "expected": [
+        "httpx:httpx._auth.DigestAuth._parse_challenge",
+        "httpx:httpx._auth.DigestAuth._resolve_qop"
+      ],
+      "citegraph": [
+        "httpx:httpx._auth.DigestAuth._parse_challenge",
+        "httpx:httpx._auth.DigestAuth._resolve_qop"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._auth.DigestAuth._parse_challenge",
+        "httpx:httpx._auth.DigestAuth._resolve_qop"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.45250001130625606
+    },
+    {
+      "id": "py-what_calls-httpx-10",
+      "tool": "what_calls",
+      "expected": [
+        "httpx:httpx._client.BaseClient._build_request_auth"
+      ],
+      "citegraph": [
+        "httpx:httpx._client.BaseClient._build_request_auth"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._client.BaseClient._build_request_auth"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.28989999555051327
+    },
+    {
+      "id": "py-what_does_it_call-flask-1",
+      "tool": "what_does_it_call",
+      "expected": [
+        "flask:flask.sansio.scaffold.Scaffold._get_exc_class_and_code"
+      ],
+      "citegraph": [
+        "flask:flask.sansio.scaffold.Scaffold._get_exc_class_and_code"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.ctx._AppCtxGlobals.get",
+        "flask:flask.sansio.scaffold.Scaffold._get_exc_class_and_code",
+        "flask:flask.sansio.scaffold.Scaffold.get",
+        "flask:tests.test_async.AsyncMethodView.get",
+        "flask:tests.test_basic.test_session_vary_cookie.get",
+        "flask:tests.test_helpers.TestUrlFor.test_url_with_method.MyView.get",
+        "flask:tests.test_reqctx.test_session_dynamic_cookie_name.get",
+        "flask:tests.test_views.test_explicit_head.Index.get",
+        "flask:tests.test_views.test_implicit_head.Index.get",
+        "flask:tests.test_views.test_method_based_view.Index.get",
+        "flask:tests.test_views.test_methods_var_inheritance.ChildView.get",
+        "flask:tests.test_views.test_multiple_inheritance.GetView.get",
+        "flask:tests.test_views.test_remove_method_from_parent.GetView.get",
+        "flask:tests.test_views.test_view_inheritance.Index.get",
+        "flask:tests.test_views.test_view_patching.Index.get",
+        "flask:tests.test_views.test_view_patching.Other.get",
+        "httpx:httpx._api.get",
+        "httpx:httpx._client.AsyncClient.get",
+        "httpx:httpx._client.Client.get",
+        "httpx:httpx._models.Cookies.get",
+        "httpx:httpx._models.Headers.get",
+        "httpx:httpx._urls.QueryParams.get"
+      ],
+      "baseline_score": {
+        "precision": 0.045454545454545456,
+        "recall": 1.0,
+        "f1": 0.08695652173913045
+      },
+      "latency_ms": 0.5830999580211937
+    },
+    {
+      "id": "py-what_does_it_call-flask-2",
+      "tool": "what_does_it_call",
+      "expected": [
+        "flask:flask.sansio.scaffold.Scaffold._check_setup_finished"
+      ],
+      "citegraph": [],
+      "citegraph_score": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "baseline": [
+        "flask:flask.sansio.app.App._check_setup_finished",
+        "flask:flask.sansio.blueprints.Blueprint._check_setup_finished",
+        "flask:flask.sansio.scaffold.Scaffold._check_setup_finished"
+      ],
+      "baseline_score": {
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "f1": 0.5
+      },
+      "latency_ms": 0.423500023316592
+    },
+    {
+      "id": "py-what_does_it_call-flask-3",
+      "tool": "what_does_it_call",
+      "expected": [
+        "flask:flask.sansio.blueprints.Blueprint.record"
+      ],
+      "citegraph": [
+        "flask:flask.sansio.blueprints.Blueprint.record"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.ctx.copy_current_request_context.wrapper",
+        "flask:flask.sansio.blueprints.Blueprint.record",
+        "flask:flask.sansio.blueprints.Blueprint.record_once.wrapper",
+        "flask:tests.test_signals.test_before_render_template.record",
+        "flask:tests.test_signals.test_flash_signal.record",
+        "flask:tests.test_signals.test_request_exception_signal.record",
+        "flask:tests.test_signals.test_template_rendered.record"
+      ],
+      "baseline_score": {
+        "precision": 0.14285714285714285,
+        "recall": 1.0,
+        "f1": 0.25
+      },
+      "latency_ms": 0.17089996254071593
+    },
+    {
+      "id": "py-what_does_it_call-flask-4",
+      "tool": "what_does_it_call",
+      "expected": [
+        "flask:flask.app.Flask.send_static_file",
+        "flask:flask.cli.AppGroup",
+        "flask:flask.sansio.app.App.__init__",
+        "flask:flask.sansio.app.App.add_url_rule"
+      ],
+      "citegraph": [
+        "flask:flask.cli.AppGroup"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 0.25,
+        "f1": 0.4
+      },
+      "baseline": [
+        "flask:examples.tutorial.tests.conftest.AuthActions.__init__",
+        "flask:flask.app.Flask.__init__",
+        "flask:flask.app.Flask.send_static_file",
+        "flask:flask.blueprints.Blueprint.__init__",
+        "flask:flask.blueprints.Blueprint.send_static_file",
+        "flask:flask.cli.AppGroup",
+        "flask:flask.cli.CertParamType.__init__",
+        "flask:flask.cli.FlaskGroup.__init__",
+        "flask:flask.cli.ScriptInfo.__init__",
+        "flask:flask.config.Config.__init__",
+        "flask:flask.config.ConfigAttribute.__init__",
+        "flask:flask.ctx.AppContext.__init__",
+        "flask:flask.ctx.RequestContext.__init__",
+        "flask:flask.debughelpers.DebugFilesKeyError.__init__",
+        "flask:flask.debughelpers.FormDataRoutingRedirect.__init__",
+        "flask:flask.json.provider.JSONProvider.__init__",
+        "flask:flask.json.tag.JSONTag.__init__",
+        "flask:flask.json.tag.TaggedJSONSerializer.__init__",
+        "flask:flask.sansio.app.App.__init__",
+        "flask:flask.sansio.app.App.add_url_rule",
+        "flask:flask.sansio.blueprints.Blueprint.__init__",
+        "flask:flask.sansio.blueprints.Blueprint.add_url_rule",
+        "flask:flask.sansio.blueprints.BlueprintSetupState.__init__",
+        "flask:flask.sansio.blueprints.BlueprintSetupState.add_url_rule",
+        "flask:flask.sansio.scaffold.Scaffold.__init__",
+        "flask:flask.sansio.scaffold.Scaffold.add_url_rule",
+        "flask:flask.sessions.SecureCookieSession.__init__",
+        "flask:flask.templating.DispatchingJinjaLoader.__init__",
+        "flask:flask.templating.Environment.__init__",
+        "flask:flask.testing.EnvironBuilder.__init__",
+        "flask:flask.testing.FlaskCliRunner.__init__",
+        "flask:flask.testing.FlaskClient.__init__",
+        "flask:tests.test_appctx.test_custom_app_ctx_globals_class.CustomRequestGlobals.__init__",
+        "flask:tests.test_basic.test_multi_route_class_views.View.__init__",
+        "flask:tests.test_basic.test_session_using_application_root.PrefixPathMiddleware.__init__",
+        "flask:tests.test_helpers.FakePath.__init__",
+        "flask:tests.test_helpers.PyBytesIO.__init__",
+        "flask:tests.test_helpers.TestStreaming.test_streaming_with_context_and_custom_close.Wrapper.__init__",
+        "flask:tests.test_json.FixedOffset.__init__",
+        "flask:tests.test_json.test_json_customization.X.__init__",
+        "flask:tests.test_json_tag.test_custom_tag.Foo.__init__",
+        "flask:tests.test_views.test_init_once.CountInit.__init__",
+        "flask:tests.type_check.typing_route.RenderTemplateView.__init__",
+        "httpx:httpx._auth.BasicAuth.__init__",
+        "httpx:httpx._auth.DigestAuth.__init__",
+        "httpx:httpx._auth.FunctionAuth.__init__",
+        "httpx:httpx._auth.NetRCAuth.__init__",
+        "httpx:httpx._client.AsyncClient.__init__",
+        "httpx:httpx._client.BaseClient.__init__",
+        "httpx:httpx._client.BoundAsyncStream.__init__",
+        "httpx:httpx._client.BoundSyncStream.__init__",
+        "httpx:httpx._client.Client.__init__",
+        "httpx:httpx._config.Limits.__init__",
+        "httpx:httpx._config.Proxy.__init__",
+        "httpx:httpx._config.Timeout.__init__",
+        "httpx:httpx._content.AsyncIteratorByteStream.__init__",
+        "httpx:httpx._content.ByteStream.__init__",
+        "httpx:httpx._content.IteratorByteStream.__init__",
+        "httpx:httpx._decoders.BrotliDecoder.__init__",
+        "httpx:httpx._decoders.ByteChunker.__init__",
+        "httpx:httpx._decoders.DeflateDecoder.__init__",
+        "httpx:httpx._decoders.GZipDecoder.__init__",
+        "httpx:httpx._decoders.LineDecoder.__init__",
+        "httpx:httpx._decoders.MultiDecoder.__init__",
+        "httpx:httpx._decoders.TextChunker.__init__",
+        "httpx:httpx._decoders.TextDecoder.__init__",
+        "httpx:httpx._decoders.ZStandardDecoder.__init__",
+        "httpx:httpx._exceptions.CookieConflict.__init__",
+        "httpx:httpx._exceptions.HTTPError.__init__",
+        "httpx:httpx._exceptions.HTTPStatusError.__init__",
+        "httpx:httpx._exceptions.InvalidURL.__init__",
+        "httpx:httpx._exceptions.RequestError.__init__",
+        "httpx:httpx._exceptions.RequestNotRead.__init__",
+        "httpx:httpx._exceptions.ResponseNotRead.__init__",
+        "httpx:httpx._exceptions.StreamClosed.__init__",
+        "httpx:httpx._exceptions.StreamConsumed.__init__",
+        "httpx:httpx._exceptions.StreamError.__init__",
+        "httpx:httpx._models.Cookies._CookieCompatRequest.__init__",
+        "httpx:httpx._models.Cookies._CookieCompatResponse.__init__",
+        "httpx:httpx._models.Cookies.__init__",
+        "httpx:httpx._models.Headers.__init__",
+        "httpx:httpx._models.Request.__init__",
+        "httpx:httpx._models.Response.__init__",
+        "httpx:httpx._multipart.DataField.__init__",
+        "httpx:httpx._multipart.FileField.__init__",
+        "httpx:httpx._multipart.MultipartStream.__init__",
+        "httpx:httpx._transports.asgi.ASGIResponseStream.__init__",
+        "httpx:httpx._transports.asgi.ASGITransport.__init__",
+        "httpx:httpx._transports.default.AsyncHTTPTransport.__init__",
+        "httpx:httpx._transports.default.AsyncResponseStream.__init__",
+        "httpx:httpx._transports.default.HTTPTransport.__init__",
+        "httpx:httpx._transports.default.ResponseStream.__init__",
+        "httpx:httpx._transports.mock.MockTransport.__init__",
+        "httpx:httpx._transports.wsgi.WSGIByteStream.__init__",
+        "httpx:httpx._transports.wsgi.WSGITransport.__init__",
+        "httpx:httpx._urls.QueryParams.__init__",
+        "httpx:httpx._urls.URL.__init__",
+        "httpx:httpx._utils.URLPattern.__init__",
+        "httpx:tests.client.test_async_client.test_context_managed_transport.Transport.__init__",
+        "httpx:tests.client.test_async_client.test_context_managed_transport_and_mount.Transport.__init__",
+        "httpx:tests.client.test_auth.App.__init__",
+        "httpx:tests.client.test_auth.DigestApp.__init__",
+        "httpx:tests.client.test_auth.RepeatAuth.__init__",
+        "httpx:tests.client.test_auth.ResponseBodyAuth.__init__",
+        "httpx:tests.client.test_auth.SyncOrAsyncAuth.__init__",
+        "httpx:tests.client.test_client.test_context_managed_transport.Transport.__init__",
+        "httpx:tests.client.test_client.test_context_managed_transport_and_mount.Transport.__init__",
+        "httpx:tests.test_content.test_async_bytesio_content.AsyncBytesIO.__init__",
+        "httpx:tests.test_multipart.test_multipart_encode_non_seekable_filelike.IteratorIO.__init__"
+      ],
+      "baseline_score": {
+        "precision": 0.03669724770642202,
+        "recall": 1.0,
+        "f1": 0.07079646017699115
+      },
+      "latency_ms": 1.584000012371689
+    },
+    {
+      "id": "py-what_does_it_call-flask-5",
+      "tool": "what_does_it_call",
+      "expected": [
+        "flask:flask.sansio.scaffold.Scaffold._method_route"
+      ],
+      "citegraph": [
+        "flask:flask.sansio.scaffold.Scaffold._method_route"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.sansio.scaffold.Scaffold._method_route"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.5652999971061945
+    },
+    {
+      "id": "py-what_does_it_call-flask-6",
+      "tool": "what_does_it_call",
+      "expected": [
+        "flask:flask.sansio.app.App.iter_blueprints"
+      ],
+      "citegraph": [
+        "flask:flask.sansio.app.App.iter_blueprints",
+        "flask:flask.templating.DispatchingJinjaLoader.list_templates"
+      ],
+      "citegraph_score": {
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666
+      },
+      "baseline": [
+        "flask:examples.celery.src.task_app.tasks.add",
+        "flask:examples.celery.src.task_app.views.add",
+        "flask:examples.javascript.js_example.views.add",
+        "flask:examples.tutorial.flaskr.blog.update",
+        "flask:flask.sansio.app.App.iter_blueprints",
+        "flask:flask.templating.DispatchingJinjaLoader.list_templates",
+        "flask:tests.test_json.test_json_attr.add",
+        "flask:tests.test_reqctx.test_session_dynamic_cookie_name.set",
+        "flask:tests.test_testing.test_client_json_no_app_context.Namespace.add",
+        "httpx:httpx._models.Cookies.set",
+        "httpx:httpx._models.Cookies.update",
+        "httpx:httpx._models.Headers.update",
+        "httpx:httpx._urls.QueryParams.add",
+        "httpx:httpx._urls.QueryParams.set",
+        "httpx:httpx._urls.QueryParams.update"
+      ],
+      "baseline_score": {
+        "precision": 0.06666666666666667,
+        "recall": 1.0,
+        "f1": 0.125
+      },
+      "latency_ms": 0.5419000517576933
+    },
+    {
+      "id": "py-what_does_it_call-flask-7",
+      "tool": "what_does_it_call",
+      "expected": [
+        "flask:flask.cli.ScriptInfo.load_app",
+        "flask:flask.cli.show_server_banner",
+        "flask:flask.helpers.get_debug_flag"
+      ],
+      "citegraph": [
+        "flask:flask.cli.ScriptInfo.load_app",
+        "flask:flask.cli.show_server_banner",
+        "flask:flask.helpers.get_debug_flag"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:examples.tutorial.tests.conftest.app",
+        "flask:flask.cli.ScriptInfo.load_app",
+        "flask:flask.cli.run_command.app",
+        "flask:flask.cli.show_server_banner",
+        "flask:flask.helpers.get_debug_flag",
+        "flask:tests.conftest.app",
+        "flask:tests.test_cli.TestRoutes.app",
+        "flask:tests.test_user_error_handler.TestGenericHandlers.app",
+        "httpx:tests.client.test_event_hooks.app",
+        "httpx:tests.conftest.app",
+        "httpx:tests.test_wsgi.test_wsgi_server_port.app",
+        "httpx:tests.test_wsgi.test_wsgi_server_protocol.app"
+      ],
+      "baseline_score": {
+        "precision": 0.25,
+        "recall": 1.0,
+        "f1": 0.4
+      },
+      "latency_ms": 0.3744999994523823
+    },
+    {
+      "id": "py-what_does_it_call-flask-8",
+      "tool": "what_does_it_call",
+      "expected": [
+        "flask:flask.sansio.scaffold.Scaffold._method_route"
+      ],
+      "citegraph": [
+        "flask:flask.sansio.scaffold.Scaffold._method_route"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.sansio.scaffold.Scaffold._method_route"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.23340003099292517
+    },
+    {
+      "id": "py-what_does_it_call-flask-9",
+      "tool": "what_does_it_call",
+      "expected": [
+        "flask:flask.sansio.scaffold.Scaffold.add_url_rule"
+      ],
+      "citegraph": [],
+      "citegraph_score": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "baseline": [
+        "flask:flask.ctx.AppContext.pop",
+        "flask:flask.ctx.RequestContext.pop",
+        "flask:flask.ctx._AppCtxGlobals.pop",
+        "flask:flask.sansio.app.App.add_url_rule",
+        "flask:flask.sansio.blueprints.Blueprint.add_url_rule",
+        "flask:flask.sansio.blueprints.BlueprintSetupState.add_url_rule",
+        "flask:flask.sansio.scaffold.Scaffold.add_url_rule"
+      ],
+      "baseline_score": {
+        "precision": 0.14285714285714285,
+        "recall": 1.0,
+        "f1": 0.25
+      },
+      "latency_ms": 0.4275999963283539
+    },
+    {
+      "id": "py-what_does_it_call-flask-10",
+      "tool": "what_does_it_call",
+      "expected": [
+        "flask:flask.templating._stream"
+      ],
+      "citegraph": [
+        "flask:flask.templating._stream"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "flask:flask.templating._stream"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.17749995458871126
+    },
+    {
+      "id": "py-what_does_it_call-httpx-1",
+      "tool": "what_does_it_call",
+      "expected": [
+        "httpx:httpx._content.UnattachedStream"
+      ],
+      "citegraph": [
+        "httpx:httpx._content.UnattachedStream"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._content.UnattachedStream",
+        "httpx:httpx._models.Headers.items",
+        "httpx:httpx._urls.QueryParams.items"
+      ],
+      "baseline_score": {
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "f1": 0.5
+      },
+      "latency_ms": 0.2326999674551189
+    },
+    {
+      "id": "py-what_does_it_call-httpx-2",
+      "tool": "what_does_it_call",
+      "expected": [
+        "httpx:httpx._api.request"
+      ],
+      "citegraph": [
+        "httpx:httpx._api.request"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._api.request",
+        "httpx:httpx._client.AsyncClient.request",
+        "httpx:httpx._client.Client.request",
+        "httpx:httpx._exceptions.HTTPError.request",
+        "httpx:httpx._models.Response.request"
+      ],
+      "baseline_score": {
+        "precision": 0.2,
+        "recall": 1.0,
+        "f1": 0.33333333333333337
+      },
+      "latency_ms": 0.15919998986646533
+    },
+    {
+      "id": "py-what_does_it_call-httpx-3",
+      "tool": "what_does_it_call",
+      "expected": [
+        "httpx:httpx._urls.QueryParams.add",
+        "httpx:httpx._urls.URL.copy_with"
+      ],
+      "citegraph": [
+        "httpx:httpx._urls.URL.copy_with"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      },
+      "baseline": [
+        "flask:examples.celery.src.task_app.tasks.add",
+        "flask:examples.celery.src.task_app.views.add",
+        "flask:examples.javascript.js_example.views.add",
+        "flask:tests.test_json.test_json_attr.add",
+        "flask:tests.test_testing.test_client_json_no_app_context.Namespace.add",
+        "httpx:httpx._urlparse.ParseResult.copy_with",
+        "httpx:httpx._urls.QueryParams.add",
+        "httpx:httpx._urls.URL.copy_with"
+      ],
+      "baseline_score": {
+        "precision": 0.25,
+        "recall": 1.0,
+        "f1": 0.4
+      },
+      "latency_ms": 0.3027000348083675
+    },
+    {
+      "id": "py-what_does_it_call-httpx-4",
+      "tool": "what_does_it_call",
+      "expected": [
+        "httpx:httpx._client._port_or_default"
+      ],
+      "citegraph": [
+        "httpx:httpx._client._port_or_default"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._client._port_or_default"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.29450003057718277
+    },
+    {
+      "id": "py-what_does_it_call-httpx-5",
+      "tool": "what_does_it_call",
+      "expected": [
+        "httpx:httpx._multipart.MultipartStream.iter_chunks"
+      ],
+      "citegraph": [
+        "httpx:httpx._multipart.MultipartStream.iter_chunks"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._multipart.MultipartStream.iter_chunks"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.2723000361584127
+    },
+    {
+      "id": "py-what_does_it_call-httpx-6",
+      "tool": "what_does_it_call",
+      "expected": [
+        "httpx:httpx._content.UnattachedStream"
+      ],
+      "citegraph": [
+        "httpx:httpx._content.UnattachedStream"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._content.UnattachedStream",
+        "httpx:httpx._models.Headers.items",
+        "httpx:httpx._urls.QueryParams.items"
+      ],
+      "baseline_score": {
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "f1": 0.5
+      },
+      "latency_ms": 0.26240001898258924
+    },
+    {
+      "id": "py-what_does_it_call-httpx-7",
+      "tool": "what_does_it_call",
+      "expected": [
+        "httpx:httpx._urlparse.PERCENT"
+      ],
+      "citegraph": [
+        "httpx:httpx._urlparse.PERCENT"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._urlparse.PERCENT",
+        "httpx:httpx._urls.URL.join"
+      ],
+      "baseline_score": {
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666
+      },
+      "latency_ms": 0.2679999452084303
+    },
+    {
+      "id": "py-what_does_it_call-httpx-8",
+      "tool": "what_does_it_call",
+      "expected": [
+        "httpx:httpx._utils.to_bytes"
+      ],
+      "citegraph": [
+        "httpx:httpx._utils.to_bytes"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._utils.to_bytes"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.27009996119886637
+    },
+    {
+      "id": "py-what_does_it_call-httpx-9",
+      "tool": "what_does_it_call",
+      "expected": [
+        "httpx:httpx._exceptions.DecodingError"
+      ],
+      "citegraph": [
+        "httpx:httpx._exceptions.DecodingError"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._exceptions.DecodingError"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.24039996787905693
+    },
+    {
+      "id": "py-what_does_it_call-httpx-10",
+      "tool": "what_does_it_call",
+      "expected": [
+        "httpx:httpx._utils.to_str"
+      ],
+      "citegraph": [
+        "httpx:httpx._utils.to_str"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": [
+        "httpx:httpx._models.Headers.items",
+        "httpx:httpx._urls.QueryParams.items",
+        "httpx:httpx._utils.to_str"
+      ],
+      "baseline_score": {
+        "precision": 0.3333333333333333,
+        "recall": 1.0,
+        "f1": 0.5
+      },
+      "latency_ms": 0.24140003370121121
+    },
+    {
+      "id": "py-find_config_key-flask-1",
+      "tool": "find_config_key",
+      "expected": [
+        "flask:src/flask/app.py:627",
+        "flask:src/flask/cli.py:481",
+        "flask:src/flask/helpers.py:32",
+        "flask:tests/conftest.py:21",
+        "flask:tests/test_helpers.py:345"
+      ],
+      "citegraph": [
+        "flask:src/flask/cli.py:481",
+        "flask:src/flask/helpers.py:32"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 0.4,
+        "f1": 0.5714285714285715
+      },
+      "baseline": [
+        "flask:src/flask/app.py:601",
+        "flask:src/flask/app.py:627",
+        "flask:src/flask/cli.py:481",
+        "flask:src/flask/helpers.py:30",
+        "flask:src/flask/helpers.py:32",
+        "flask:tests/conftest.py:21",
+        "flask:tests/test_helpers.py:345"
+      ],
+      "baseline_score": {
+        "precision": 0.7142857142857143,
+        "recall": 1.0,
+        "f1": 0.8333333333333333
+      },
+      "latency_ms": 0.3960999893024564
+    },
+    {
+      "id": "py-find_config_key-flask-2",
+      "tool": "find_config_key",
+      "expected": [
+        "flask:src/flask/app.py:611",
+        "flask:src/flask/cli.py:675",
+        "flask:tests/conftest.py:22"
+      ],
+      "citegraph": [
+        "flask:src/flask/app.py:611",
+        "flask:src/flask/cli.py:675"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      },
+      "baseline": [
+        "flask:src/flask/app.py:611",
+        "flask:src/flask/cli.py:675",
+        "flask:tests/conftest.py:22"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.5244000349193811
+    },
+    {
+      "id": "py-find_config_key-flask-3",
+      "tool": "find_config_key",
+      "expected": [
+        "flask:src/flask/helpers.py:43",
+        "flask:tests/test_cli.py:579"
+      ],
+      "citegraph": [
+        "flask:src/flask/helpers.py:43"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6666666666666666
+      },
+      "baseline": [
+        "flask:src/flask/helpers.py:38",
+        "flask:src/flask/helpers.py:43",
+        "flask:tests/test_cli.py:579"
+      ],
+      "baseline_score": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "f1": 0.8
+      },
+      "latency_ms": 0.2766000106930733
+    },
+    {
+      "id": "py-find_config_key-httpx-1",
+      "tool": "find_config_key",
+      "expected": [
+        "httpx:httpx/_config.py:34",
+        "httpx:httpx/_config.py:35",
+        "httpx:tests/conftest.py:24"
+      ],
+      "citegraph": [
+        "httpx:httpx/_config.py:34",
+        "httpx:httpx/_config.py:35"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8
+      },
+      "baseline": [
+        "httpx:httpx/_config.py:34",
+        "httpx:httpx/_config.py:35",
+        "httpx:tests/conftest.py:24"
+      ],
+      "baseline_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms": 0.3972999984398484
+    },
+    {
+      "id": "py-find_config_key-flask-4",
+      "tool": "find_config_key",
+      "expected": [
+        "flask:examples/tutorial/flaskr/__init__.py:11",
+        "flask:src/flask/app.py:183",
+        "flask:src/flask/sansio/app.py:216",
+        "flask:tests/conftest.py:49",
+        "flask:tests/static/config.json:3",
+        "flask:tests/static/config.toml:2",
+        "flask:tests/test_config.py:10",
+        "flask:tests/test_config.py:112",
+        "flask:tests/test_config.py:116",
+        "flask:tests/test_config.py:120",
+        "flask:tests/test_config.py:124",
+        "flask:tests/test_config.py:137"
+      ],
+      "citegraph": [
+        "flask:tests/static/config.json:3"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 0.08333333333333333,
+        "f1": 0.15384615384615385
+      },
+      "baseline": [
+        "flask:examples/tutorial/flaskr/__init__.py:11",
+        "flask:src/flask/app.py:183",
+        "flask:src/flask/config.py:66",
+        "flask:src/flask/sansio/app.py:215",
+        "flask:src/flask/sansio/app.py:216",
+        "flask:src/flask/sessions.py:304",
+        "flask:src/flask/sessions.py:312",
+        "flask:src/flask/sessions.py:92",
+        "flask:tests/conftest.py:49",
+        "flask:tests/static/config.json:3",
+        "flask:tests/test_basic.py:383",
+        "flask:tests/test_basic.py:406",
+        "flask:tests/test_basic.py:413",
+        "flask:tests/test_basic.py:416",
+        "flask:tests/test_config.py:10",
+        "flask:tests/test_config.py:112",
+        "flask:tests/test_config.py:116",
+        "flask:tests/test_config.py:120",
+        "flask:tests/test_config.py:124",
+        "flask:tests/test_config.py:137",
+        "flask:tests/test_config.py:14",
+        "flask:tests/test_reqctx.py:243"
+      ],
+      "baseline_score": {
+        "precision": 0.5,
+        "recall": 0.9166666666666666,
+        "f1": 0.6470588235294118
+      },
+      "latency_ms": 0.34060003235936165
+    },
+    {
+      "id": "py-find_path-flask-1",
+      "tool": "find_path",
+      "expected": [
+        "flask:flask.app.Flask.__init__",
+        "flask:flask.sansio.app.App.__init__",
+        "flask:flask.sansio.app.App.make_config",
+        "flask:flask.helpers.get_debug_flag"
+      ],
+      "citegraph": [],
+      "citegraph_score": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "baseline": null,
+      "baseline_score": null,
+      "latency_ms": 0.3182999789714813
+    },
+    {
+      "id": "py-find_path-flask-2",
+      "tool": "find_path",
+      "expected": [
+        "flask:flask.sansio.scaffold.Scaffold.patch",
+        "flask:flask.sansio.scaffold.Scaffold._method_route",
+        "flask:flask.sansio.scaffold.Scaffold.route"
+      ],
+      "citegraph": [
+        "flask:flask.sansio.scaffold.Scaffold.patch",
+        "flask:flask.sansio.scaffold.Scaffold._method_route",
+        "flask:flask.sansio.scaffold.Scaffold.route"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": null,
+      "baseline_score": null,
+      "latency_ms": 0.25620002998039126
+    },
+    {
+      "id": "py-find_path-flask-3",
+      "tool": "find_path",
+      "expected": [
+        "flask:flask.templating.DispatchingJinjaLoader.get_source",
+        "flask:flask.templating.DispatchingJinjaLoader._get_source_explained",
+        "flask:flask.debughelpers.explain_template_loading_attempts"
+      ],
+      "citegraph": [
+        "flask:flask.templating.DispatchingJinjaLoader.get_source",
+        "flask:flask.templating.DispatchingJinjaLoader._get_source_explained",
+        "flask:flask.debughelpers.explain_template_loading_attempts"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": null,
+      "baseline_score": null,
+      "latency_ms": 0.3464999608695507
+    },
+    {
+      "id": "py-find_path-httpx-1",
+      "tool": "find_path",
+      "expected": [
+        "httpx:httpx._api.options",
+        "httpx:httpx._api.request",
+        "httpx:httpx._client.Client.request",
+        "httpx:httpx._client.BaseClient.build_request",
+        "httpx:httpx._client.BaseClient._merge_url"
+      ],
+      "citegraph": [],
+      "citegraph_score": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "baseline": null,
+      "baseline_score": null,
+      "latency_ms": 0.18350000027567148
+    },
+    {
+      "id": "py-find_path-httpx-2",
+      "tool": "find_path",
+      "expected": [
+        "httpx:httpx._client.Client._send_handling_redirects",
+        "httpx:httpx._client.BaseClient._build_redirect_request",
+        "httpx:httpx._client.BaseClient._redirect_headers",
+        "httpx:httpx._client._same_origin"
+      ],
+      "citegraph": [
+        "httpx:httpx._client.Client._send_handling_redirects",
+        "httpx:httpx._client.BaseClient._build_redirect_request",
+        "httpx:httpx._client.BaseClient._redirect_headers",
+        "httpx:httpx._client._same_origin"
+      ],
+      "citegraph_score": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "baseline": null,
+      "baseline_score": null,
+      "latency_ms": 0.5222999607212842
+    }
+  ],
+  "by_tool": {
+    "find_config_key": {
+      "n": 5,
+      "citegraph": {
+        "precision": 1.0,
+        "recall": 0.46333333333333326,
+        "f1": 0.5983882783882783
+      },
+      "baseline": {
+        "precision": 0.7761904761904762,
+        "recall": 0.9833333333333334,
+        "f1": 0.856078431372549
+      }
+    },
+    "find_path": {
+      "n": 5,
+      "citegraph": {
+        "precision": 0.6,
+        "recall": 0.6,
+        "f1": 0.6
+      },
+      "baseline": null
+    },
+    "what_calls": {
+      "n": 20,
+      "citegraph": {
+        "precision": 0.85,
+        "recall": 0.7541666666666667,
+        "f1": 0.7783333333333333
+      },
+      "baseline": {
+        "precision": 0.6316524207478155,
+        "recall": 1.0,
+        "f1": 0.691283979178716
+      }
+    },
+    "what_does_it_call": {
+      "n": 20,
+      "citegraph": {
+        "precision": 0.875,
+        "recall": 0.8375,
+        "f1": 0.8366666666666667
+      },
+      "baseline": {
+        "precision": 0.4983933039437627,
+        "recall": 1.0,
+        "f1": 0.579137649095806
+      }
+    }
+  },
+  "calibration": [
+    {
+      "rule": "same_file",
+      "nominal": 0.95,
+      "observed": 1.0,
+      "n": 26
+    },
+    {
+      "rule": "import_scope",
+      "nominal": 0.9,
+      "observed": 1.0,
+      "n": 34
+    },
+    {
+      "rule": "repo_unique",
+      "nominal": 0.7,
+      "observed": 0.6,
+      "n": 5
+    },
+    {
+      "rule": "ambiguous",
+      "nominal": 0.15,
+      "observed": 0.17073170731707318,
+      "n": 82
+    }
+  ],
+  "p50_ms": 0.345399952493608,
+  "p95_ms": 2.544799994211644
+}
