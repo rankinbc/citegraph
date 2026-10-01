@@ -19,6 +19,7 @@ from citegraph.redact.patterns import (
     ENTROPY_MIN_LENGTH,
     ENTROPY_THRESHOLD,
     ENTROPY_TOKEN,
+    PATH_WORD,
     SecretPattern,
 )
 
@@ -49,6 +50,7 @@ def redaction_fingerprint() -> str:
                 ENTROPY_THRESHOLD,
                 BASE64_MIN_CLASS_CHANGE_RATE,
                 ASSIGNMENT.pattern,
+                PATH_WORD.pattern,
             ],
         ]
     )
@@ -118,32 +120,50 @@ def _entropy_spans(token: str, start: int) -> list[tuple[int, int]]:
 def _part_spans(part: str, start: int) -> list[tuple[int, int]]:
     """A part without "/", or a base64-shaped one, is judged whole. Any other part is a path or URL.
 
-    Standard base64 never holds "-" or "_", so a base64 value in a path can only follow the last segment holding
-    one: that remainder (the value in `my-app/<value>`) is judged whole when it is base64-shaped. Every other
-    segment is judged on its own, so digits in a folder or file name never redact the path while a long random
-    segment is still caught.
+    Standard base64 never holds "-" or "_", and a random value rarely has a path word as a segment, so in a path a
+    base64 value lies inside a block of consecutive segments that are neither: segments holding "-" or "_" and
+    path words delimit the blocks (`my-app/<value>/x_y`, `v1/tokens/<value>/revoke_all`). Each block is judged by
+    `_block_spans`; a delimiting segment is judged on its own.
     """
     if is_high_entropy(part) and ("/" not in part or is_base64_shaped(part)):
         return [(start, start + len(part))]
-    segments = part.split("/")
-    folders = max(
-        (i + 1 for i, segment in enumerate(segments) if "-" in segment or "_" in segment), default=0
-    )
-    remainder = "/".join(segments[folders:])
-    remainder_whole = (
-        folders > 0
-        and len(remainder) >= ENTROPY_MIN_LENGTH
-        and is_high_entropy(remainder)
-        and is_base64_shaped(remainder)
-    )
     spans: list[tuple[int, int]] = []
-    for segment in segments[:folders] if remainder_whole else segments:
-        if len(segment) >= ENTROPY_MIN_LENGTH and is_high_entropy(segment):
-            spans.append((start, start + len(segment)))
+    block: list[tuple[int, str]] = []  # (offset, segment)
+    for segment in part.split("/"):
+        if "-" in segment or "_" in segment or PATH_WORD.fullmatch(segment):
+            spans += _block_spans(block) + _segment_spans(start, segment)
+            block = []
+        else:
+            block.append((start, segment))
         start += len(segment) + 1
-    if remainder_whole:
-        spans.append((start, start + len(remainder)))
-    return spans
+    return spans + _block_spans(block)
+
+
+def _segment_spans(start: int, segment: str) -> list[tuple[int, int]]:
+    if len(segment) >= ENTROPY_MIN_LENGTH and is_high_entropy(segment):
+        return [(start, start + len(segment))]
+    return []
+
+
+def _block_spans(block: list[tuple[int, str]]) -> list[tuple[int, int]]:
+    """A block is judged whole when it is at least 32 characters, high-entropy and base64-shaped, and its longest
+    segment mixes upper- and lower-case letters: random base64 almost always does, while a hex hash or a
+    lower-case temporary folder name does not, even when a neighbor such as macOS's `T` brings an upper-case
+    letter into the block. Otherwise each segment is judged on its own, so digits in a folder or file name never
+    redact the path while a long random segment is still caught.
+    """
+    text = "/".join(segment for _, segment in block)
+    longest = max((segment for _, segment in block), key=len, default="")
+    if (
+        len(text) >= ENTROPY_MIN_LENGTH
+        and is_high_entropy(text)
+        and is_base64_shaped(text)
+        and any(c.isupper() for c in longest)
+        and any(c.islower() for c in longest)
+    ):
+        (first, _), (last, segment) = block[0], block[-1]
+        return [(first, last + len(segment))]
+    return [span for offset, segment in block for span in _segment_spans(offset, segment)]
 
 
 def find_secrets(text: str) -> list[SecretHit]:

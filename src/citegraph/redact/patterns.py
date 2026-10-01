@@ -61,3 +61,8 @@ BASE64_MIN_CLASS_CHANGE_RATE = 0.45
 # An assignment "=" inside a token holding "/" (`AWS_SECRET_ACCESS_KEY=<value>` is one token): the key and the
 # value are judged apart. An "=" before another "=" or at the end of the token is base64 padding and stays.
 ASSIGNMENT = re.compile(r"=(?=[^=])")
+
+# A path word: a segment of four or more lower-case letters (`backups`, `tokens`). In a path, path words and
+# segments holding "-" or "_" delimit a base64 value (sanitizer._part_spans). A random base64 segment is rarely
+# one (26 of its 64 characters are lower-case letters).
+PATH_WORD = re.compile(r"[a-z]{4,}")
