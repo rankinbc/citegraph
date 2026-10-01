@@ -289,7 +289,7 @@ Three layers, in order of importance:
 citegraph index <root> [--name NAME] [--jobs N]
 citegraph serve --root <root>          # stdio MCP server
 citegraph query <tool> [args...]       # same tools, for humans and scripts
-citegraph status [--root <root>]
+citegraph status --root <root>
 citegraph audit tail|stats
 citegraph leak-scan <paths...> [--fail-on-findings]
 citegraph eval fetch|run|report [--level 1|2]
@@ -454,9 +454,33 @@ The agent-guardrails companion is built between M1 and M2.
 
 ### Final review fixes (2026-09-30)
 
-18. **Python package roots deferred to M2.** Section 5 lists "package roots found by `pyproject.toml` or
+18. **Entropy rule and paths.** The generic high-entropy token matched across "/", so repo paths with digits
+    (`migrations/20240115093000_add_user_table.sql`), absolute repo roots (which made every answer stale) and
+    lockfile URLs were redacted. A token holding "/" is now judged whole only when it is base64-shaped: no "-"
+    or "_" (the url-safe alphabet replaces "/" with "_"), upper case, lower case and digits present, and at least
+    0.45 character-class changes per adjacent pair (random base64 averages about 0.65; words and identifiers far
+    less). Any other token holding "/" is judged one segment at a time. A fixture keeps a base64 value containing
+    "/" caught as one value. The pre-commit hook excludes lockfiles. (Refines section 7.)
+19. **Content fingerprint.** Rows are rewritten only when a file's content hash changes, so a new sanitizer or
+    extractor would never reach an existing index. The `meta` table stores a content fingerprint (the citegraph
+    version plus a hash of the built-in patterns, the entropy parameters and the extra patterns from
+    `citegraph.toml`); when it differs, every file is re-extracted through the sanitizing write path and the graph
+    is re-resolved. The resolver fingerprint (item 11) now also covers the stoplist. (Amends section 3,
+    "Incremental indexing", and item 11.)
+20. **Extra patterns on egress.** `serve`, `query` and `status` load `citegraph.toml` before any tool runs, so
+    extra redaction patterns apply to responses and audit lines, not only to the index. The config rejects unknown
+    keys and invalid regexes, and every command that reads it reports a bad file as a one-line error.
+    (Amends section 7.)
+21. **Hidden edges are reported.** Graph answers always report `source: derived`. When `min_confidence` hides
+    some of a symbol's own call edges, a note counts them, names their rules and gives the `min_confidence` that
+    shows them. An empty answer's confidence is the highest hidden edge's confidence, and 1.0 only when there are
+    no call edges at all. (Amends section 5.)
+22. **Python package roots deferred to M2.** Section 5 lists "package roots found by `pyproject.toml` or
     `__init__.py`". M1 names a module by its path from the repo root, dropping a top-level `src/` only, so
     imports into packages nested below the root (a monorepo's `services/<name>/<pkg>/`, a `backend/app/` layout)
     resolve only when the import path matches that full path. Changing module naming would rename test modules
     in the pinned eval corpus and invalidate the golden set and the calibration in item 10, so package-root
     discovery moves to M2. The README lists it under Limitations. (Amends section 5.)
+23. **No demo GIF in M1.** M1 shipped without the terminal GIF planned in sections 2, 12 and 13. The README shows
+    real CLI output on the eval corpus instead; `docs/demo.tape` records the GIF with vhs later.
+    (Amends sections 2, 12 and 13.)

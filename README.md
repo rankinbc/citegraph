@@ -195,7 +195,8 @@ The leak scanner is also a pre-commit hook (`citegraph-leak-scan` in `.pre-commi
   and `.env` example files. Presence checks (`"X" in os.environ`), `monkeypatch.setenv`, Flask app-config keys
   defined in Python and TOML config files are missed; this is why grep wins `find_config_key`.
 - **Calibration is in-sample on one corpus.** `ambiguous` was fitted and checked on the same 82 edges,
-  `repo_unique` rests on 5 edges, and `direct` and `cross_repo_unique` produced no edges to measure.
+  `repo_unique` rests on 5 edges, and `cross_repo_unique` produced no edges to measure. `direct` is reserved in
+  M1: the resolver never emits it.
 
 ## Roadmap
 

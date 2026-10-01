@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from datetime import datetime
-from typing import Literal, TypeVar
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -13,8 +13,6 @@ RefKind = Literal["call", "import", "inherit", "instantiate"]
 ConfigOrigin = Literal["json", "yaml", "env-example", "code-read"]
 Source = Literal["parsed", "derived", "curated"]
 ErrorCode = Literal["not_indexed", "ambiguous_symbol", "not_found", "invalid_argument"]
-
-T = TypeVar("T")
 
 
 class Symbol(BaseModel):

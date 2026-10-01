@@ -4,8 +4,9 @@
 # (no human review). Every expected entry was checked by opening the source at the referencing line.
 #
 # Labeling rules, fixed before citegraph was run on these questions:
-# - Subjects are library definitions (src/flask/, httpx/), taken in sha256 hash order from the SCIP
-#   reference pool; callers and callees may live anywhere in the repo (library, tests, examples).
+# - Subjects are library definitions (src/flask/, httpx/), picked from the SCIP reference pool in a
+#   sha256-based order by a one-off scratch script that is not part of this repo; callers and callees may
+#   live anywhere in the repo (library, tests, examples).
 # - what_calls: a caller counts when a line inside it calls or instantiates the target with call syntax,
 #   including through an import alias, a re-export or an attribute whose static type resolves to the
 #   target. Bare decorators (`@name`), callbacks passed without a call, type annotations, isinstance
