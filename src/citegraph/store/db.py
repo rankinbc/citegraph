@@ -170,12 +170,18 @@ class Store:
             )
         return file_id
 
-    def delete_repos_not_in(self, names: Iterable[str]) -> int:
-        keep = [sanitize(n) for n in names]
-        if not keep:
-            return self._write("DELETE FROM repos").rowcount
-        placeholders = ",".join("?" * len(keep))
-        return self._write(f"DELETE FROM repos WHERE name NOT IN ({placeholders})", keep).rowcount
+    def delete_repos_not_in(self, names: Iterable[str], keep_prefixes: Iterable[str] = ()) -> int:
+        """Delete every repo not named, except projects (`<repo>/<folder>`) of a repo in keep_prefixes."""
+        keep = {sanitize(n) for n in names}
+        prefixes = tuple(sanitize(p) + "/" for p in keep_prefixes)
+        drop = [
+            int(r["id"])
+            for r in self.conn.execute("SELECT id, name FROM repos")
+            if str(r["name"]) not in keep and not str(r["name"]).startswith(prefixes)
+        ]
+        for repo_id in drop:  # by id: a stored name passed back to _write could be re-sanitized differently
+            self._write("DELETE FROM repos WHERE id = ?", (repo_id,))
+        return len(drop)
 
     def replace_edges(self, rows: Iterable[EdgeRow]) -> int:
         self._write("DELETE FROM edges")

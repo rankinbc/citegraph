@@ -140,3 +140,13 @@ def test_open_adds_receiver_type_to_an_index_from_an_older_release(tmp_path: Pat
     columns = {r["name"] for r in store.conn.execute("PRAGMA table_info(refs)")}
     assert "receiver_type" in columns
     assert store.get_meta("schema_version") == SCHEMA_VERSION
+
+
+def test_delete_repos_keeps_the_projects_of_a_repo_that_failed_to_scan(tmp_path: Path) -> None:
+    store = Store.open(tmp_path / "i.db")
+    for name in ("mono", "mono/components/api", "other", "other/tools"):
+        store.upsert_repo(name, f"/r/{name}", "a" * 40)
+    # this run scanned "other" (no projects any more) and failed to scan "mono"
+    assert store.delete_repos_not_in(["other", "mono"], keep_prefixes=["mono"]) == 1
+    names = {str(r["name"]) for r in store.conn.execute("SELECT name FROM repos")}
+    assert names == {"mono", "mono/components/api", "other"}

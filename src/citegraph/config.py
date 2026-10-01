@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import tomllib
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
@@ -29,6 +30,8 @@ class CitegraphConfig(BaseModel):
     exclude: list[str] = Field(default_factory=lambda: list(DEFAULT_EXCLUDE))
     languages: list[str] = Field(default_factory=lambda: ["python", "csharp"])
     extra_redaction_patterns: list[str] = Field(default_factory=list[str])
+    # "off": each git repository is one logical repo; "auto" or a list of folders: projects inside a repository
+    projects: Literal["off", "auto"] | list[str] = "off"
 
     @field_validator("extra_redaction_patterns")
     @classmethod

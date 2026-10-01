@@ -13,7 +13,7 @@ from citegraph import __version__
 from citegraph.config import load_config
 from citegraph.extract import EXTRACTORS, stored_module
 from citegraph.home import index_path
-from citegraph.ingest import MAX_FILE_BYTES, IngestError, RepoInfo, discover_repos, scan_repo
+from citegraph.ingest import MAX_FILE_BYTES, IngestError, RepoInfo, discover_repos, scan_projects
 from citegraph.models import ExtractResult
 from citegraph.redact import configure_extra_patterns, redaction_fingerprint, sanitize
 from citegraph.redact.leakscan import scan_paths
@@ -132,17 +132,19 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
         failed: list[str] = []
         for repo_path in repos:
             try:
-                info = scan_repo(repo_path, config)
+                infos, warnings = scan_projects(repo_path, config)
             except IngestError as exc:
                 stats.warnings.append(str(exc))
                 failed.append(repo_path.name)
                 continue
-            repo_changed, repo_removed = _index_repo(store, info, jobs, stats, rewrite)
-            changed, removed = changed or repo_changed, removed or repo_removed
-            shas[info.name] = info.head_sha
+            stats.warnings.extend(warnings)
+            for info in infos:
+                repo_changed, repo_removed = _index_repo(store, info, jobs, stats, rewrite)
+                changed, removed = changed or repo_changed, removed or repo_removed
+                shas[info.name] = info.head_sha
         # a repo that failed to scan this run (transient git error) keeps its previously indexed
-        # rows; only a repo no longer discovered under root at all is dropped
-        if store.delete_repos_not_in([*shas, *failed]):
+        # rows, its projects included; only a repo no longer discovered under root at all is dropped
+        if store.delete_repos_not_in([*shas, *failed], keep_prefixes=failed):
             changed = removed = True
         if not failed:  # a repo that failed to scan still holds rows written under the old fingerprint
             store.set_meta(CONTENT_FINGERPRINT_KEY, content)

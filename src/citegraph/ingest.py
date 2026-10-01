@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from collections import defaultdict
 from fnmatch import fnmatchcase
 from pathlib import Path, PurePosixPath
 
@@ -24,6 +25,7 @@ CONFIG_FILE_GLOBS = (
     "pyproject.toml",
 )
 MAX_FILE_BYTES = 2_000_000
+PYTHON_PROJECT_MARKERS = frozenset({"pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"})
 
 
 class IngestError(Exception):
@@ -106,3 +108,70 @@ def scan_repo(repo: Path, config: CitegraphConfig) -> RepoInfo:
         if path.is_file():
             files.append(RepoFile(rel_path=rel, lang=lang, size=path.stat().st_size))
     return RepoInfo(name=repo.name, path=repo, head_sha=sha, files=files)
+
+
+def project_roots(tracked: list[str], projects: str | list[str]) -> list[str]:
+    """Project folders inside a repository, as repository-relative paths.
+
+    "auto": folders holding a Python marker file or a `.sln`, and folders holding a `.csproj` with no `.sln` above
+    them; the repository root is never a project of its own. A list: those folders. "off": none.
+    """
+    if projects == "off":
+        return []
+    if not isinstance(projects, str):
+        return sorted({p.strip("/") for p in projects if p.strip("/")})
+    roots: set[str] = set()
+    solutions: set[str] = set()
+    csproj: set[str] = set()
+    for rel in tracked:
+        folder, _, name = rel.rpartition("/")
+        if not folder:
+            continue
+        if name in PYTHON_PROJECT_MARKERS:
+            roots.add(folder)
+        elif name.endswith(".sln"):
+            solutions.add(folder)
+        elif name.endswith(".csproj"):
+            csproj.add(folder)
+    roots |= solutions
+    roots |= {f for f in csproj if not any(f == s or f.startswith(s + "/") for s in solutions)}
+    return sorted(roots)
+
+
+def scan_projects(repo: Path, config: CitegraphConfig) -> tuple[list[RepoInfo], list[str]]:
+    """The repository as logical repos, one per project folder plus one for the rest, and any warnings.
+
+    A project's files are re-rooted at its folder, so module names and evidence paths start there.
+    """
+    info = scan_repo(repo, config)
+    if config.projects == "off":
+        return [info], []
+    tracked = tracked_files(repo)
+    roots = project_roots(tracked, config.projects)
+    warnings: list[str] = []
+    if not isinstance(config.projects, str):
+        folders = {rel.rpartition("/")[0] for rel in tracked}
+        known = {f for folder in folders for f in _parents(folder)}
+        for root in roots:
+            if root not in known:
+                warnings.append(f"{repo.name}: project folder {root!r} holds no tracked files")
+        roots = [r for r in roots if r in known]
+    by_root: dict[str | None, list[RepoFile]] = defaultdict(list)
+    deepest_first = sorted(roots, key=len, reverse=True)
+    for file in info.files:
+        root = next((r for r in deepest_first if file.rel_path.startswith(r + "/")), None)
+        rel = file.rel_path[len(root) + 1 :] if root else file.rel_path
+        by_root[root].append(RepoFile(rel_path=rel, lang=file.lang, size=file.size))
+    infos = [RepoInfo(name=info.name, path=info.path, head_sha=info.head_sha, files=by_root[None])]
+    infos += [
+        RepoInfo(
+            name=f"{info.name}/{root}", path=info.path / root, head_sha=info.head_sha, files=by_root[root]
+        )
+        for root in roots
+    ]
+    return infos, warnings
+
+
+def _parents(folder: str) -> list[str]:
+    parts = folder.split("/") if folder else []
+    return ["/".join(parts[:i]) for i in range(1, len(parts) + 1)]
