@@ -4,10 +4,21 @@
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-**A code graph for AI coding agents that cites its evidence.** citegraph indexes a folder of git repositories and
-answers structural questions over [MCP](https://modelcontextprotocol.io): *who calls this, what does it call, how does
-A reach B, where is this config key set and read.* Every answer comes with `path:line` evidence, the commit it was
-computed at, how it was derived, and a confidence score that was measured, not guessed.
+**Gives AI coding assistants an exact, citable map of how your Python code is wired together.** Instead of grepping
+and reading file after file to answer "what calls this?", your assistant asks citegraph and gets the precise answer
+with file and line numbers it can check.
+
+## What is it?
+
+citegraph is a **command-line tool that also runs as an MCP server**. It is not a Claude Code plugin; it works with
+any AI assistant that supports [MCP](https://modelcontextprotocol.io) (the Model Context Protocol, the standard way AI
+assistants call external tools), including Claude Code, Claude Desktop and Cursor.
+
+- You install it once and run it on your own machine. Nothing is sent to a service.
+- You point it at your repositories, and it builds a local index (a SQLite file under `~/.citegraph`).
+- You register it with your assistant with one command. From then on the assistant starts citegraph in the background
+  and calls it on its own whenever you ask a question about how the code fits together.
+- You can also use it directly from the terminal, no AI required.
 
 ## What it does
 
@@ -35,7 +46,7 @@ things up in that map instead of searching text.
 functions that use the name, and the assistant has to open each one to find the 5 real callers. citegraph returns exactly those 5, each with its
 file, line, and a 0.9 confidence ([example below](#example)).
 
-## Why
+## Why use it?
 
 Ask a coding agent "what calls `place_order`?" and it greps. That works, but:
 
@@ -53,6 +64,62 @@ source text or config values.
 
 **Who it is for:** anyone running Claude Code or another MCP client against a multi-repo Python codebase who wants
 faster, cheaper and checkable answers to "how is this wired together?"
+
+## Install and use
+
+You need Python 3.13+, git, and [uv](https://docs.astral.sh/uv/) (a Python package manager). citegraph is installed
+from this repository; it is not on PyPI yet.
+
+**1. Install the `citegraph` command**
+
+```bash
+uv tool install git+https://github.com/rankinbc/citegraph
+```
+
+**2. Index your code.** Point it at one repository or a folder that contains several.
+
+```bash
+citegraph index ~/src/my-repos
+```
+
+This takes seconds and writes a local index. Run it again after you pull new code; only changed files are re-read.
+
+**3. Connect it to your AI assistant.** For Claude Code, run this once:
+
+```bash
+claude mcp add citegraph -- citegraph serve --root ~/src/my-repos
+```
+
+For other MCP clients (Claude Desktop, Cursor and others), add this to the client's MCP server configuration, using
+the absolute path to your folder:
+
+```json
+{
+  "mcpServers": {
+    "citegraph": { "command": "citegraph", "args": ["serve", "--root", "/absolute/path/to/my-repos"] }
+  }
+}
+```
+
+**4. Ask questions as you normally would.** For example:
+
+- "What calls `OrderService.place_order`?"
+- "What does `checkout` call, two levels deep?"
+- "How does the `/orders` handler end up calling `charge_card`?"
+- "Where is `PAYMENT_API_URL` defined, and what reads it?"
+- "Give me an overview of the billing repo."
+
+The assistant sees citegraph's tools and decides when to call them; Claude Code shows each call it makes. It gets back
+file and line references, which it can quote and open. In Claude Code, `/mcp` shows whether citegraph is connected.
+
+**Without an AI assistant**, the same nine tools work from the terminal:
+
+```bash
+citegraph query what_calls symbol=place_order --root ~/src/my-repos
+citegraph query find_config_key pattern=PAYMENT_API_URL --root ~/src/my-repos
+citegraph status --root ~/src/my-repos    # what is indexed, and whether it is out of date
+citegraph audit stats                     # every tool call is logged locally
+```
 
 ## Example
 
@@ -122,35 +189,6 @@ Confidence is calibrated: each resolver rule's nominal confidence is checked aga
 0.5. Ambiguous edges are hidden unless a query asks for them, and the answer says how many were hidden.
 
 ![F1 by tool](eval/reports/2026-09-28/f1_by_tool.svg) ![Calibration](eval/reports/2026-09-28/calibration.svg)
-
-## Quickstart
-
-Requires Python 3.13+, git, and [uv](https://docs.astral.sh/uv/).
-
-```bash
-# 1. Index a folder of git repositories (or a single repository)
-uvx --from git+https://github.com/rankinbc/citegraph citegraph index ~/src/my-repos
-
-# 2. Register the MCP server with Claude Code
-claude mcp add citegraph -- uvx --from git+https://github.com/rankinbc/citegraph citegraph serve --root ~/src/my-repos
-
-# 3. Ask Claude Code: "what calls OrderService.place_order?"
-```
-
-Re-run step 1 after pulling changes; only changed files are re-parsed, and answers say `stale: true` when a repo
-has moved past the indexed commit. The same tools are available from the command line:
-
-```bash
-uvx --from git+https://github.com/rankinbc/citegraph citegraph query what_calls symbol=place_order --root ~/src/my-repos
-```
-
-To reproduce the eval from a clone of this repository:
-
-```bash
-uv sync --all-extras
-uv run citegraph eval fetch    # clones flask 3.1.3 and httpx 0.28.1 into ~/.citegraph/corpus/repos
-uv run citegraph eval run --golden eval/golden/python.yaml
-```
 
 ## Tools
 
@@ -237,6 +275,14 @@ flask 3.1.3 and httpx 0.28.1, 35.6k lines of Python pinned in [eval/corpus.yaml]
   for the 40 call questions, whatever its confidence.
 - **Regression gate.** CI re-runs a 19-question subset on every push and fails if any tool's F1 drops more than 0.02
   below [eval/baseline.ci.json](eval/baseline.ci.json).
+
+To reproduce the eval from a clone of this repository:
+
+```bash
+uv sync --all-extras
+uv run citegraph eval fetch    # clones flask 3.1.3 and httpx 0.28.1 into ~/.citegraph/corpus/repos
+uv run citegraph eval run --golden eval/golden/python.yaml
+```
 
 The first committed report overstated citegraph's lead because of a scope-tracking bug in the grep baseline. An audit
 of the eval caught it before release; [analysis.md](eval/reports/2026-09-28/analysis.md) records the correction, the
