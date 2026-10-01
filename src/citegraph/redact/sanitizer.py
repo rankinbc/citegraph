@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import re
 from collections import Counter
@@ -33,6 +35,17 @@ def configure_extra_patterns(patterns: list[str]) -> None:
     global _extra
     _extra = tuple(SecretPattern("custom", re.compile(p)) for p in patterns)
     sanitize.cache_clear()
+
+
+def redaction_fingerprint() -> str:
+    """Short hash of every pattern and parameter `sanitize` uses, including the configured extra patterns."""
+    payload = json.dumps(
+        [
+            [(p.kind, p.regex.pattern, p.regex.flags, p.value_group) for p in BUILTIN_PATTERNS + _extra],
+            [ENTROPY_TOKEN.pattern, ENTROPY_MIN_LENGTH, ENTROPY_THRESHOLD, BASE64_MIN_CLASS_CHANGE_RATE],
+        ]
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
 
 def shannon_entropy(token: str) -> float:

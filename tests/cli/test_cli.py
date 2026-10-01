@@ -5,7 +5,9 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+import citegraph.indexer as indexer_mod
 from citegraph.cli.main import main
+from citegraph.redact.leakscan import Finding
 from tests.fixtures.sample_corpus import BILLING, SHOP
 from tests.helpers import load_secret_cases
 
@@ -78,3 +80,15 @@ def test_leak_scan(tmp_path: Path) -> None:
     assert result.exit_code == 1
     assert "dirty.txt:1: aws-access-key" in result.output
     assert secret not in result.output
+
+
+def test_index_leak_scan_failure_says_what_to_do(
+    make_repo: MakeRepo, repos_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    make_repo("shop", SHOP)
+    monkeypatch.setattr(indexer_mod, "scan_paths", lambda _paths: [Finding("index.db#symbols", 1, "custom")])
+    result = CliRunner().invoke(main, ["index", str(repos_root)])
+    assert result.exit_code == 1
+    db_path = result.output.split("index: ", 1)[1].splitlines()[0]
+    assert f"delete {db_path}" in result.output
+    assert "report a bug" in result.output

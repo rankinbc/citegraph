@@ -57,6 +57,20 @@ def test_confidence_change_re_resolves_without_file_changes(
     assert [r["confidence"] for r in rows] == [0.93]
 
 
+def test_redaction_change_rewrites_unchanged_files(sample_root: Path) -> None:
+    first = index_root(sample_root)
+    config = 'extra_redaction_patterns = ["render_[a-z]+"]\n'
+    (sample_root / "citegraph.toml").write_text(config, encoding="utf-8")
+    again = index_root(sample_root)
+    assert again.files_changed == first.files_changed
+    assert again.resolved is True
+    rows = open_index(again.db_path).conn.execute("SELECT qualified_name FROM symbols")
+    names = [r["qualified_name"] for r in rows]
+    assert "billing.invoices.<redacted:custom>" in names
+    assert not any("render_invoice" in n for n in names)
+    assert index_root(sample_root).files_changed == 0
+
+
 def test_incremental_matches_full_reindex(sample_root: Path) -> None:
     index_root(sample_root, name="inc")
     billing = sample_root / "billing"

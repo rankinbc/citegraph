@@ -1,7 +1,10 @@
 from pathlib import Path
 
+import pytest
+
+import citegraph.resolve.rules as rules
 from citegraph.resolve import resolve_all
-from citegraph.resolve.rules import CONFIDENCE, is_stoplisted
+from citegraph.resolve.rules import CONFIDENCE, is_stoplisted, resolver_fingerprint
 from tests.fixtures.sample_corpus import SAMPLE, SAMPLE_EDGES
 from tests.helpers import build_store, edge_set
 
@@ -70,3 +73,9 @@ def test_resolve_is_idempotent(tmp_path: Path) -> None:
     store = build_store(tmp_path / "i.db", SAMPLE)
     resolve_all(store)
     assert edge_set(store) == SAMPLE_EDGES
+
+
+def test_resolver_fingerprint_covers_the_stoplist(monkeypatch: pytest.MonkeyPatch) -> None:
+    before = resolver_fingerprint()
+    monkeypatch.setattr(rules, "COMMON_NAMES", rules.COMMON_NAMES | {"charge"})
+    assert resolver_fingerprint() != before

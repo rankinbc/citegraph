@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
 
 from citegraph.query.common import QueryContext
+from citegraph.redact import configure_extra_patterns
 from citegraph.store import Store
 from tests.fixtures.sample_corpus import SAMPLE
 from tests.helpers import build_store, commit_all, git, write_files
@@ -16,6 +17,13 @@ def citegraph_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     home = tmp_path / "cg-home"
     monkeypatch.setenv("CITEGRAPH_HOME", str(home))
     return home
+
+
+@pytest.fixture(autouse=True)
+def reset_extra_patterns() -> Iterator[None]:
+    """Extra redaction patterns are process-wide; a test that loads a citegraph.toml must not leak them."""
+    yield
+    configure_extra_patterns([])
 
 
 @pytest.fixture

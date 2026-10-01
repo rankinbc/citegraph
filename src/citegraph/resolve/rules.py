@@ -6,7 +6,8 @@ import builtins
 import hashlib
 import json
 
-# Bump when resolver logic or the stoplist changes, so existing indexes re-resolve on the next run.
+# Bump when resolver logic changes, so existing indexes re-resolve on the next run. The confidence table,
+# the candidate cap and the stoplist are part of resolver_fingerprint already.
 RESOLVER_VERSION = "1"
 
 CONFIDENCE: dict[str, float] = {
@@ -36,7 +37,9 @@ def resolver_fingerprint() -> str:
     Edges keep the confidence they were resolved with, so an index whose stored fingerprint differs
     is re-resolved even when no file changed. Computed per call so a changed table is always seen.
     """
-    payload = json.dumps([RESOLVER_VERSION, sorted(CONFIDENCE.items()), MAX_CANDIDATES])
+    payload = json.dumps(
+        [RESOLVER_VERSION, sorted(CONFIDENCE.items()), MAX_CANDIDATES, sorted(COMMON_NAMES | PYTHON_BUILTINS)]
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
 

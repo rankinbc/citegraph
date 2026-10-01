@@ -9,12 +9,13 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from citegraph import __version__
 from citegraph.config import load_config
 from citegraph.extract import EXTRACTORS, module_name_for
 from citegraph.home import index_path
 from citegraph.ingest import MAX_FILE_BYTES, IngestError, RepoInfo, discover_repos, scan_repo
 from citegraph.models import ExtractResult
-from citegraph.redact import configure_extra_patterns, sanitize
+from citegraph.redact import configure_extra_patterns, redaction_fingerprint, sanitize
 from citegraph.redact.leakscan import scan_paths
 from citegraph.resolve import resolve_all
 from citegraph.resolve.rules import resolver_fingerprint
@@ -22,6 +23,17 @@ from citegraph.store import Store
 
 PARALLEL_THRESHOLD = 50
 RESOLVER_FINGERPRINT_KEY = "resolver_fingerprint"
+CONTENT_FINGERPRINT_KEY = "content_fingerprint"
+
+
+def content_fingerprint() -> str:
+    """Everything that decides stored rows besides the files themselves: the citegraph version (extractors)
+    and the redaction patterns and parameters, including extra patterns from citegraph.toml.
+
+    Rows are rewritten only when a file's content hash changes, so an index whose stored fingerprint differs
+    has every file re-extracted and rewritten through the sanitizing write path.
+    """
+    return f"{__version__}:{redaction_fingerprint()}"
 
 
 class IndexStats(BaseModel):
@@ -55,7 +67,7 @@ def _extract_all(items: list[tuple[str, str, bytes]], jobs: int | None) -> list[
         return list(pool.map(_extract_one, items, chunksize=16))
 
 
-def _index_repo(store: Store, info: RepoInfo, jobs: int | None, stats: IndexStats) -> bool:
+def _index_repo(store: Store, info: RepoInfo, jobs: int | None, stats: IndexStats, rewrite: bool) -> bool:
     repo_id = store.upsert_repo(info.name, str(info.path), info.head_sha)
     existing = store.file_hashes(repo_id)
     current: set[str] = set()
@@ -68,7 +80,7 @@ def _index_repo(store: Store, info: RepoInfo, jobs: int | None, stats: IndexStat
         current.add(key)
         data = (info.path / file.rel_path).read_bytes()
         digest = hashlib.blake2b(data, digest_size=16).hexdigest()
-        if existing.get(key) != digest:
+        if rewrite or existing.get(key) != digest:
             todo.append((file.rel_path, file.lang, digest, data))
     deleted = [path for path in existing if path not in current]
     for path in deleted:
@@ -97,6 +109,8 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
     try:
         run_id = store.start_run()
         store.commit()
+        content = content_fingerprint()
+        rewrite = store.get_meta(CONTENT_FINGERPRINT_KEY) != content
         changed = False
         shas: dict[str, str] = {}
         failed: list[str] = []
@@ -107,12 +121,14 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
                 stats.warnings.append(str(exc))
                 failed.append(repo_path.name)
                 continue
-            changed = _index_repo(store, info, jobs, stats) or changed
+            changed = _index_repo(store, info, jobs, stats, rewrite) or changed
             shas[info.name] = info.head_sha
         # a repo that failed to scan this run (transient git error) keeps its previously indexed
         # rows; only a repo no longer discovered under root at all is dropped
         if store.delete_repos_not_in([*shas, *failed]):
             changed = True
+        if not failed:  # a repo that failed to scan still holds rows written under the old fingerprint
+            store.set_meta(CONTENT_FINGERPRINT_KEY, content)
         store.commit()
         fingerprint = resolver_fingerprint()
         rules_changed = store.get_meta(RESOLVER_FINGERPRINT_KEY) != fingerprint

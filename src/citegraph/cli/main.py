@@ -60,7 +60,9 @@ def index(root: Path, name: str | None, jobs: int | None) -> None:
     click.echo(f"index: {stats.db_path}")
     if not stats.leak_scan_clean:
         raise click.ClickException(
-            "leak scan found secret-shaped values in the index; run `citegraph leak-scan` on it and report a bug"
+            f"leak scan found secret-shaped values in the index; delete {stats.db_path} and run `citegraph index` "
+            f"again, and report a bug if it persists (`citegraph leak-scan {stats.db_path}` lists the locations, "
+            "never the values)"
         )
 
 
