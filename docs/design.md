@@ -287,13 +287,19 @@ Three layers, in order of importance:
 
 ```
 citegraph index <root> [--name NAME] [--jobs N]
-citegraph serve --root <root>          # stdio MCP server
-citegraph query <tool> [args...]       # same tools, for humans and scripts
-citegraph status --root <root>
-citegraph audit tail|stats
+citegraph serve --root <root> [--name NAME]                         # stdio MCP server
+citegraph query <tool> [key=value ...] --root <root> [--name NAME]  # same tools, for humans and scripts
+citegraph status --root <root> [--name NAME]
+citegraph audit tail [-n N]
+citegraph audit stats [--days N]
 citegraph leak-scan <paths...> [--fail-on-findings]
-citegraph eval fetch|run|report [--level 1|2]
+citegraph eval fetch [--corpus FILE]
+citegraph eval run --golden FILE [--corpus FILE] [--subset all|ci] [--out DIR] [--no-charts]
+                   [--check-baseline FILE] [--write-baseline FILE]
+citegraph eval report <results.json>
 ```
+
+`--root` is required wherever it appears; `--name` picks a named index (default: the root folder name).
 
 - Index location: `~/.citegraph/indexes/<name>-<hash8>.db`, where `hash8` is derived from the absolute root
   path. Nothing is written inside the repos.
