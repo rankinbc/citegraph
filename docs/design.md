@@ -279,9 +279,11 @@ Three layers, in order of importance:
    - High-entropy tokens above a length and entropy threshold.
    - Matches become `<redacted:kind>`.
    - Extra patterns configurable in `citegraph.toml`.
-3. **Leak scanner.** `citegraph leak-scan <paths>` scans files, including the raw `.db`, with the same rules.
-   `index` runs it on the database at the end of every run and records `leak_scan_clean`. Also shipped as a
-   pre-commit hook.
+3. **Leak scanner.** `citegraph leak-scan <paths>` scans files with the same rules; a SQLite file is scanned cell
+   by cell (TEXT cells of ordinary tables), so free pages and FTS index blobs are not covered by the scan. Deleted
+   rows are zeroed (`secure_delete`), a run that deleted rows optimizes the FTS index, and a rewrite also runs
+   VACUUM, so they hold no residue. `index` runs the scan on the database at the end of every run and records
+   `leak_scan_clean`. Also shipped as a pre-commit hook.
 
 ## 8. CLI and configuration
 
@@ -490,3 +492,44 @@ The agent-guardrails companion is built between M1 and M2.
 23. **No demo GIF in M1.** M1 shipped without the terminal GIF planned in sections 2, 12 and 13. The README shows
     real CLI output on the eval corpus instead; `docs/demo.tape` records the GIF with vhs later.
     (Amends sections 2, 12 and 13.)
+
+### Pre-publish residual fixes (2026-09-30)
+
+24. **Rewrites delete by id, never by stored path.** A stored path was sanitized under the rules in force when it
+    was written, and `Store._write` sanitizes every parameter again under the current rules, so a delete keyed by a
+    stored path could miss its row: after a new extra pattern matched a stored path, the raw row survived beside
+    the redacted one. On a rewrite (item 19) every file row of the repo is deleted by repo id before every file is
+    written again; an ordinary deleted file is removed by row id. Stored strings are compared with this run's keys
+    but never used as a write parameter. The index opens with SQLite `secure_delete=ON`, so deleted rows are zeroed
+    rather than left in free pages. (Amends item 19.)
+25. **Assignments and folder prefixes.** `ENTROPY_TOKEN` includes "=", "_" and "-", so a .env line such as
+    `AWS_SECRET_ACCESS_KEY=<value>` is one token, and the "_" in the key name made item 18 judge a base64 value
+    containing "/" one segment at a time; the same happened after a folder such as `my-app/`. A token without "/"
+    is still judged whole. A token holding "/" is first split at each assignment "=" (an "=" followed by a
+    character other than "=", so base64 padding never splits), and each part is judged on its own: a part without
+    "/", or a base64-shaped one, is judged whole (the 32-character minimum applies to the token, not the part);
+    otherwise the remainder after the last segment holding "-" or "_" is judged whole when it is at least 32
+    characters, high-entropy and base64-shaped, and every other segment is judged alone. The assignment rule is
+    part of the content fingerprint. (Amends item 18.)
+
+### Post-publish cleanup (2026-10-01)
+
+26. **Deleted symbols leave the search index.** `symbols_fts` is an external-content FTS5 table: deleting a symbol
+    only records a delete marker, and the deleted row's trigrams stay in older segments until FTS5 merges them, so
+    trigrams of a name redacted by a rewrite could survive in live index blobs. After any run that deleted rows (a
+    rewrite, or a changed or deleted file, or a repo no longer under the root), `citegraph index` runs the FTS5
+    `optimize` command, which merges the index into one segment without them. (Amends item 24.)
+27. **VACUUM after a rewrite.** `secure_delete` zeroes only what is deleted while it is on, so an index written by
+    an earlier release keeps older deleted content in free pages and in free space inside pages. After a
+    content-fingerprint rewrite that deleted rows (the upgrade path, item 19), `citegraph index` commits and runs
+    `VACUUM`, which rebuilds the file; the database stays in WAL mode. On the eval corpus index (3.9 MB) it takes
+    about 50-70 ms. (Amends item 24.)
+28. **A base64 value inside a path.** Item 25 judged a value whole only after the last segment holding "-" or "_",
+    so a value followed by such a segment (`my-app/<value>/x_y`, `<value>/my_file.txt`,
+    `.../v1/tokens/<value>/revoke_all`) was judged one segment at a time and mostly missed. Path words (segments of
+    four or more lower-case letters, such as `backups` or `tokens`) now delimit a value as segments holding "-" or
+    "_" do. Each block of consecutive segments between delimiters is judged whole when it is at least 32
+    characters, high-entropy and base64-shaped and its longest segment mixes upper- and lower-case letters (a hex
+    hash or a lower-case macOS temporary folder never does, even beside a `T` segment); otherwise each segment is
+    judged alone, as is each delimiter. On 2000 random values, each of the three shapes is fully redacted 98.2% of
+    the time or more (0% before). The path-word pattern is part of the content fingerprint. (Amends item 25.)
