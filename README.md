@@ -4,47 +4,58 @@
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-**Gives AI coding assistants an exact, citable map of how your Python code is wired together.** Instead of grepping
-and reading file after file to answer "what calls this?", your assistant asks citegraph and gets the precise answer
-with file and line numbers it can check.
+**Ask your AI coding assistant "what calls this function?" and get the exact answer, with file and line numbers it
+can prove.**
 
-## What is it?
+citegraph turns your Python repositories into a searchable call graph and hands it to Claude Code (or any assistant
+that speaks [MCP](https://modelcontextprotocol.io)) as a set of tools. Instead of grepping and reading file after file,
+the assistant asks citegraph and gets back the precise callers, callees, call paths and config usages, each with its
+`path:line`, the git commit, and a confidence score measured against a labeled benchmark.
 
-citegraph is a **command-line tool that also runs as an MCP server**. It is not a Claude Code plugin; it works with
-any AI assistant that supports [MCP](https://modelcontextprotocol.io) (the Model Context Protocol, the standard way AI
-assistants call external tools), including Claude Code, Claude Desktop and Cursor.
+| | |
+|---|---|
+| **What it is** | A command-line tool that also runs as a local MCP server. Written in Python 3.13. Not a hosted service, and not a Claude Code plugin: any MCP-compatible assistant can use it. |
+| **What it does** | Reads your repos once, records which functions call which and where each config setting is defined and read, and answers questions about that map in milliseconds. |
+| **Who it is for** | Developers who use Claude Code, Claude Desktop or Cursor on Python codebases, especially ones spread across several repositories. |
+| **Why it is different** | Every answer cites its evidence and says how sure it is. It never returns source code or secrets. Its accuracy is measured against grep, and that check runs in CI. |
 
-- You install it once and run it on your own machine. Nothing is sent to a service.
-- You point it at your repositories, and it builds a local index (a SQLite file under `~/.citegraph`).
-- You register it with your assistant with one command. From then on the assistant starts citegraph in the background
-  and calls it on its own whenever you ask a question about how the code fits together.
-- You can also use it directly from the terminal, no AI required.
+### How a question flows
+
+```mermaid
+sequenceDiagram
+    actor You
+    participant Claude as Claude Code
+    participant CG as citegraph (local MCP server)
+    participant Index as Local index (names and locations only)
+    You->>Claude: "What calls OrderService.place_order?"
+    Claude->>CG: what_calls(symbol="OrderService.place_order")
+    CG->>Index: look up resolved call edges
+    Index-->>CG: callers, each with its rule and confidence
+    CG-->>Claude: callers with path:line, commit, confidence
+    Claude->>Claude: opens only those lines to confirm
+    Claude-->>You: answer that cites each caller's file and line
+```
 
 ## What it does
 
-In plain terms: citegraph builds a map of how your code is wired together, and lets an AI coding assistant look
-things up in that map instead of searching text.
-
-1. **It reads your code.** Point it at a folder of git repositories. It parses every git-tracked Python file and records each
-   function, class and method, which functions call which, what each file imports, and which configuration settings
-   (environment variables, keys in JSON/YAML config files) are defined or read where. It stores names and
+1. **It reads your code.** Point it at a folder of git repositories. It parses every git-tracked Python file and records
+   each function, class and method, which functions call which, what each file imports, and which configuration
+   settings (environment variables, keys in JSON/YAML config files) are defined or read where. It stores names and
    locations only, never the code itself or any config values.
-2. **It answers questions about that map.** It runs as a tool server that AI assistants such as Claude Code connect
-   to through MCP (the Model Context Protocol, the standard way assistants call external tools). The assistant can
-   then ask:
+2. **It answers questions about that map.** Your assistant starts citegraph in the background and calls it on its own
+   whenever you ask how the code fits together:
    - *Who calls this function?* and *What does this function call?*
    - *How does this endpoint end up calling that database helper?* (the shortest call chain between two functions)
    - *Where is the `PAYMENT_API_URL` setting defined, and which code reads it?*
    - *What is in this repo?* (languages, main modules, entry points, most-called functions)
-3. **Every answer shows its work.** Each result lists the file and line it came from, the git commit it was computed
-   at, which rule linked the two pieces of code (same file, an import, a unique name, or a name-only guess), and how
-   confident that rule is, measured against a labeled test set. Low-confidence guesses are hidden unless the
-   assistant asks for them, and the answer says how many were hidden. If a repo has new commits since it was
-   indexed, the answer is flagged as stale.
+3. **Every answer shows its work.** Each result lists the file and line it came from, the git commit it was computed at,
+   which rule linked the two pieces of code (same file, an import, a unique name, or a name-only guess), and how
+   reliable that rule proved in testing. Low-confidence guesses are hidden unless the assistant asks for them, and the
+   answer says how many were hidden. If a repo has new commits since it was indexed, the answer is flagged as stale.
 
 **Before and after.** Asked who calls `flask.json.loads`, a plain text search (the eval's grep baseline) turns up 21
-functions that use the name, and the assistant has to open each one to find the 5 real callers. citegraph returns exactly those 5, each with its
-file, line, and a 0.9 confidence ([example below](#example)).
+functions that use the name, and the assistant has to open each one to find the 5 real callers. citegraph returns
+exactly those 5, each with its file, line, and a 0.9 confidence ([example below](#example)).
 
 ## Why use it?
 
@@ -56,14 +67,8 @@ Ask a coding agent "what calls `place_order`?" and it greps. That works, but:
   file or one of twelve functions named `check`.
 - **It pulls raw source into the agent's context,** including whatever secrets happen to sit next to the match.
 
-citegraph builds the graph once (about 3 seconds for 35k lines of Python), re-indexes only changed files, and
-answers in milliseconds with structured, citable results. Each call edge records *why* it exists
-(same file, through an import, unique name, ambiguous) and a confidence calibrated against a labeled eval, so an
-agent can trust the 0.9 answers and know when to go read the code. The index stores names and locations only, never
-source text or config values.
-
-**Who it is for:** anyone running Claude Code or another MCP client against a multi-repo Python codebase who wants
-faster, cheaper and checkable answers to "how is this wired together?"
+citegraph builds the graph once (about 3 seconds for 35k lines of Python), re-indexes only changed files, and answers
+in milliseconds with structured, citable results, so the assistant spends its context on the code that matters.
 
 ## Install and use
 
@@ -250,6 +255,44 @@ Confidence is calibrated: each resolver rule's nominal confidence is checked aga
 
 ![F1 by tool](eval/reports/2026-09-28/f1_by_tool.svg) ![Calibration](eval/reports/2026-09-28/calibration.svg)
 
+## Engineering highlights
+
+What this project demonstrates, and where to look in the code:
+
+- **Designing a tool API for an AI agent, not a human.** All nine tools return one envelope (`data`, `evidence`,
+  `source`, `confidence`, `stale`, `notes`). Errors are structured with a hint and, for an ambiguous name, the
+  candidate list, so the agent can recover on its own. Capped results and hidden low-confidence answers always say
+  so, and the server tells the agent how to use it when it connects.
+  [mcp/server.py](src/citegraph/mcp/server.py), [query/common.py](src/citegraph/query/common.py)
+- **Static analysis.** tree-sitter parsing in a process pool, relative-import resolution, and config-key extraction
+  from Python, JSON, YAML, docker-compose and `.env` files. Indexing is incremental by content hash, so a re-index
+  after a pull takes about a second.
+  [extract/python.py](src/citegraph/extract/python.py), [indexer.py](src/citegraph/indexer.py)
+- **Graph resolution with calibrated confidence.** References become call edges through six named rules, each with
+  a confidence value checked against measured precision. When the first eval showed name-only matches were right 17%
+  of the time, not the assumed 50%, the value was lowered to match and those edges were hidden by default.
+  [resolve/rules.py](src/citegraph/resolve/rules.py), [resolve/resolver.py](src/citegraph/resolve/resolver.py)
+- **Security by construction.**
+  - The database schema has no column that could hold source code or config values.
+  - Every write goes through one method that redacts secret-shaped values; every response is redacted again on the
+    way out.
+  - The index is leak-scanned after each run, and deleted rows are zeroed rather than left on disk.
+  - The server opens the database read-only, has no write or shell tools, and logs every call.
+
+  [store/db.py](src/citegraph/store/db.py), [redact/sanitizer.py](src/citegraph/redact/sanitizer.py)
+- **Evaluation discipline.**
+  - The benchmark's answers were bootstrapped from a compiler-grade index (SCIP), read with a small hand-written
+    protobuf decoder, then verified against source.
+  - citegraph is scored against a realistic grep baseline, and confidence is checked against observed precision.
+  - A subset runs in CI as a regression gate.
+  - The eval caught a bug in its own baseline that had made citegraph look about ten times better than it is on one
+    tool; the corrected, less flattering numbers are the ones published.
+
+  [evaluation/](src/citegraph/evaluation), [analysis](eval/reports/2026-09-28/analysis.md),
+  [design notes](docs/design-notes.md)
+- **Quality bar.** 250+ tests, strict type checking (pyright strict), ruff, and CI on Ubuntu and Windows. Built on
+  Python 3.13 and the MCP Python SDK v2.
+
 ## Tools
 
 | Tool | Answers |
@@ -294,32 +337,6 @@ flowchart LR
    every call written to a JSONL audit log (arguments only, never results).
 
 More detail: [architecture](docs/architecture.md), [design notes](docs/design-notes.md), [full design](docs/design.md).
-
-## Design principles
-
-- **Evidence, not answers.** Results carry `path:line`, commit, `source`, `confidence` and a `stale` flag. The agent
-  opens code with its own tools, so its own permission rules still apply.
-- **Safe by construction.** The schema has no column for source text or config values. A sanitizer runs on every
-  write and every response, and the index is leak-scanned after every run.
-- **Read-only and audited.** The database is opened read-only, there are no write or shell tools (the only
-  subprocess is a fixed `git rev-parse HEAD` staleness check), and every call is audited (`citegraph audit stats`).
-- **Measured, not claimed.** A deterministic eval with a grep baseline and confidence calibration runs in CI as a
-  regression gate, and the published results include where citegraph loses.
-
-## Code tour
-
-A short path through the parts most worth reading:
-
-| What | Where |
-|---|---|
-| Resolution rules and their confidence values | [resolve/rules.py](src/citegraph/resolve/rules.py), [resolve/resolver.py](src/citegraph/resolve/resolver.py) |
-| The single, sanitizing write path | [store/db.py](src/citegraph/store/db.py) (`Store._write`) |
-| Secret detection (specific patterns plus a path-aware entropy check) | [redact/sanitizer.py](src/citegraph/redact/sanitizer.py) |
-| Incremental indexing, fingerprints and the post-run leak scan | [indexer.py](src/citegraph/indexer.py) |
-| The evidence envelope and staleness | [query/common.py](src/citegraph/query/common.py) |
-| Read-only MCP server, audit and egress sanitizing | [mcp/server.py](src/citegraph/mcp/server.py) |
-| Eval runner and the grep baseline it is compared against | [evaluation/runner.py](src/citegraph/evaluation/runner.py), [evaluation/baseline_grep.py](src/citegraph/evaluation/baseline_grep.py) |
-| How the eval caught a bug in its own baseline, and the honest numbers that shipped | [design notes](docs/design-notes.md), [analysis](eval/reports/2026-09-28/analysis.md) |
 
 ## Evaluation
 
