@@ -14,11 +14,13 @@ from citegraph.store import EdgeRow, Store
 MAX_REEXPORT_HOPS = 3
 
 
-def _reexport(graph: Graph, qualified: str) -> str | None:
-    """`pkg.name.rest` -> `<target>.rest` when module `pkg` imports `name` from `<target>`, deepest module first."""
+def _reexport(graph: Graph, qualified: str, repo_id: int) -> str | None:
+    """`pkg.name.rest` -> `<target>.rest` when module `pkg` imports `name` from `<target>`, deepest module first.
+    The referencing repo's files are searched first: projects of one monorepo reuse module names."""
     parts = qualified.split(".")
     for k in range(len(parts) - 1, 0, -1):
-        for file_id in graph.module_files.get(".".join(parts[:k]), []):
+        files = graph.module_files.get(".".join(parts[:k]), [])
+        for file_id in [f for f in files if graph.file_repo[f] == repo_id] or files:
             target = graph.imports[file_id].get(parts[k])
             if target is not None:
                 return ".".join([target, *parts[k + 1 :]])
@@ -33,7 +35,7 @@ def _lookup_python(graph: Graph, qualified: str, repo_id: int) -> Sym | None:
         hit = lookup(graph, qualified, repo_id, "python")
         if hit is not None:
             return hit
-        following = _reexport(graph, qualified)
+        following = _reexport(graph, qualified, repo_id)
         if following is None or following in seen:
             return None
         seen.add(following)

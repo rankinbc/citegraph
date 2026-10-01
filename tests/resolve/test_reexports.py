@@ -1,6 +1,9 @@
 from pathlib import Path
 
+from citegraph.indexer import index_root
+from citegraph.store import Store
 from tests.helpers import build_store, edge_set
+from tests.test_projects import MakeRepo, edge_repos
 
 
 def edges(tmp_path: Path, files: dict[str, str]) -> set[tuple[str, str, str, str]]:
@@ -36,3 +39,23 @@ def test_reexport_cycle_and_missing_name_stay_unresolved(tmp_path: Path) -> None
         "app.py": "from a import thing\nfrom c import absent\n\n\ndef go():\n    thing()\n    absent()\n",
     }
     assert {(f, t) for f, t, kind, _ in edges(tmp_path, files) if kind == "call"} == set()
+
+
+def test_reexport_prefers_the_referencing_project(make_repo: MakeRepo, repos_root: Path) -> None:
+    make_repo(
+        "mono",
+        {
+            "components/api/requirements.txt": "fastapi\n",
+            "components/api/app/__init__.py": "from app.config import settings\n",
+            "components/api/app/config.py": "def settings():\n    pass\n",
+            "components/worker/requirements.txt": "dramatiq\n",
+            "components/worker/app/__init__.py": "from app.core import settings\n",
+            "components/worker/app/core.py": "def settings():\n    pass\n",
+            "components/worker/app/jobs.py": "from app import settings\n\n\ndef run():\n    settings()\n",
+        },
+    )
+    (repos_root / "citegraph.toml").write_text('projects = "auto"\n', encoding="utf-8")
+    store = Store.open(Path(index_root(repos_root).db_path))
+    assert ("app.jobs.run", "mono/components/worker", "app.core.settings", "mono/components/worker") in (
+        edge_repos(store)
+    )
