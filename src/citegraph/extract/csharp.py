@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Sequence
 from typing import Literal
 
@@ -10,6 +9,7 @@ import tree_sitter_c_sharp as tscsharp
 from tree_sitter import Language, Node, Parser
 
 from citegraph.extract import csharp_syntax as syn
+from citegraph.extract.names import is_name_shaped
 from citegraph.models import ConfigKey, EntryPoint, ExtractResult, ImportFact, Reference, StringConst, Symbol
 
 _LANGUAGE = Language(tscsharp.language())
@@ -26,7 +26,6 @@ _SCOPES = frozenset({"block", "lambda_expression", "anonymous_method_expression"
 _SECTION_METHODS = frozenset({"GetSection", "GetRequiredSection"})
 DEFAULT_SEND_METHODS = ("Enqueue", "EnqueueAsync")
 # a const string is kept only when its value looks like a name (a job name), never free text, paths or secrets
-_NAME_SHAPED = re.compile(r"^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$")
 _CONFIG_METHODS = _SECTION_METHODS | {"GetValue"}
 _NOT_CALLS = frozenset({"nameof"})
 
@@ -214,7 +213,7 @@ class _Visitor:
                     continue
                 name_node = declarator.child_by_field_name("name")
                 value = syn.string_value(next((c for c in declarator.named_children if c != name_node), None))
-                if value is not None and _NAME_SHAPED.match(value):
+                if value is not None and is_name_shaped(value):
                     self.result.string_consts.append(
                         StringConst(
                             qualified_name=f"{type_q}.{syn.text(name_node)}",
@@ -355,7 +354,7 @@ class _Visitor:
             return
         literal = syn.string_value(first)
         expression = first.named_children[-1] if first.named_children else None
-        if literal:
+        if literal and is_name_shaped(literal):
             self._ref(owner, literal, "queue", node)
         elif expression is not None and expression.type in ("member_access_expression", "qualified_name"):
             dotted = syn.dotted(expression)

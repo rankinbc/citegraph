@@ -100,3 +100,25 @@ def test_python_actors_and_sends() -> None:
         ("app.jobs.kick", "queue", "run_triage"),
         ("app.jobs.kick", "queue_actor", "sock"),  # resolved later: sock is no actor, so no edge
     ]
+
+
+def test_literal_job_names_must_be_name_shaped() -> None:
+    cs = (
+        "class E { void M(IJobQueue q) {\n"
+        '  q.Enqueue("two words");\n'
+        '  q.Enqueue("Dear customer, your card ending 4242 at https://shop.example.com/x");\n'
+        "} }\n"
+    )
+    assert queue_refs(CSharpExtractor().extract("E.cs", cs.encode())) == []
+    py = (
+        "def kick(broker):\n"
+        '    broker.enqueue(Message(actor_name="has spaces"))\n'
+        '    broker.enqueue(Message(actor_name="https://x.example/y"))\n'
+    )
+    assert queue_refs(PythonExtractor().extract("app/jobs.py", py.encode())) == []
+
+
+def test_python_actor_name_literal_that_is_not_name_shaped_falls_back_to_the_function() -> None:
+    py = '@actor(actor_name="has spaces")\ndef real_job():\n    pass\n'
+    result = PythonExtractor().extract("app/jobs.py", py.encode())
+    assert [h.name for h in result.queue_handlers] == ["real_job"]

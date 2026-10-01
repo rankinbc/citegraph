@@ -8,6 +8,7 @@ import tree_sitter_python as tspython
 from tree_sitter import Language, Node, Parser
 
 from citegraph.extract.base import module_name_for, package_for
+from citegraph.extract.names import is_name_shaped
 from citegraph.models import ConfigKey, EntryPoint, ExtractResult, ImportFact, QueueHandler, Reference, Symbol
 
 _LANGUAGE = Language(tspython.language())
@@ -134,7 +135,8 @@ class _Visitor:
             args = expression.child_by_field_name("arguments") if expression.type == "call" else None
             for arg in args.named_children if args is not None else []:
                 if arg.type == "keyword_argument" and _text(arg.child_by_field_name("name")) == "actor_name":
-                    name = _string_value(arg.child_by_field_name("value")) or name
+                    literal = _string_value(arg.child_by_field_name("value"))
+                    name = literal if literal and is_name_shaped(literal) else name
             self.result.queue_handlers.append(
                 QueueHandler(name=name, handler_qualified=f"{scope}.{function}", line=_line(node))
             )
@@ -243,7 +245,7 @@ class _Visitor:
         for arg in margs.named_children if margs is not None else []:
             if arg.type == "keyword_argument" and _text(arg.child_by_field_name("name")) == "actor_name":
                 job = _string_value(arg.child_by_field_name("value"))
-                if job:
+                if job and is_name_shaped(job):
                     self.result.references.append(
                         Reference(from_qualified=scope, to_name=job, kind="queue", line=_line(node))
                     )
