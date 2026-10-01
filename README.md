@@ -53,7 +53,9 @@ $ uv run citegraph query what_calls symbol=flask:flask.json.loads --root ~/.cite
   ],
   "confidence": 0.9,
   "stale": false,
-  "notes": []
+  "notes": [
+    "6 lower-confidence candidates hidden (rules: ambiguous); pass min_confidence=0.1 to see them"
+  ]
 }
 ```
 
