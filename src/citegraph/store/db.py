@@ -198,6 +198,14 @@ class Store:
             (_now(), json.dumps(repo_shas), json.dumps(counts), parse_errors, int(leak_scan_clean), run_id),
         )
 
+    def optimize_fts(self) -> None:
+        """Merge the symbol search index into one segment.
+
+        A deleted symbol is only recorded as a delete marker; its trigrams stay in older segments until they are
+        merged, so a run that deleted rows calls this to drop them.
+        """
+        self._write("INSERT INTO symbols_fts(symbols_fts) VALUES('optimize')")
+
     def set_meta(self, key: str, value: str) -> None:
         self._write("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", (key, value))
 

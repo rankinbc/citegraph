@@ -67,11 +67,19 @@ def _extract_all(items: list[tuple[str, str, bytes]], jobs: int | None) -> list[
         return list(pool.map(_extract_one, items, chunksize=16))
 
 
-def _index_repo(store: Store, info: RepoInfo, jobs: int | None, stats: IndexStats, rewrite: bool) -> bool:
+def _index_repo(
+    store: Store, info: RepoInfo, jobs: int | None, stats: IndexStats, rewrite: bool
+) -> tuple[bool, bool]:
+    """Write the repo's new and changed files and delete its removed ones.
+
+    Returns (changed, removed): whether any file row was written or deleted, and whether any stored row was
+    deleted (the old rows of a changed file count).
+    """
     repo_id = store.upsert_repo(info.name, str(info.path), info.head_sha)
     existing = store.stored_files(repo_id)
     current: set[str] = set()
     todo: list[tuple[str, str, str, bytes]] = []
+    replaced = False
     for file in info.files:
         if file.size > MAX_FILE_BYTES:
             stats.skipped_large += 1
@@ -83,6 +91,7 @@ def _index_repo(store: Store, info: RepoInfo, jobs: int | None, stats: IndexStat
         stored = existing.get(key)
         if rewrite or stored is None or stored.content_hash != digest:
             todo.append((file.rel_path, file.lang, digest, data))
+            replaced = replaced or stored is not None
     deleted = [row.id for path, row in existing.items() if path not in current]
     if rewrite:
         # rows written under another content fingerprint: a stored path sanitized under other redaction rules
@@ -99,7 +108,7 @@ def _index_repo(store: Store, info: RepoInfo, jobs: int | None, stats: IndexStat
     stats.files_total += len(info.files)
     stats.files_changed += len(todo)
     stats.files_deleted += len(deleted)
-    return bool(todo or deleted)
+    return bool(todo or deleted), bool(deleted) or replaced
 
 
 def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> IndexStats:
@@ -117,7 +126,7 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
         store.commit()
         content = content_fingerprint()
         rewrite = store.get_meta(CONTENT_FINGERPRINT_KEY) != content
-        changed = False
+        changed = removed = False
         shas: dict[str, str] = {}
         failed: list[str] = []
         for repo_path in repos:
@@ -127,12 +136,13 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
                 stats.warnings.append(str(exc))
                 failed.append(repo_path.name)
                 continue
-            changed = _index_repo(store, info, jobs, stats, rewrite) or changed
+            repo_changed, repo_removed = _index_repo(store, info, jobs, stats, rewrite)
+            changed, removed = changed or repo_changed, removed or repo_removed
             shas[info.name] = info.head_sha
         # a repo that failed to scan this run (transient git error) keeps its previously indexed
         # rows; only a repo no longer discovered under root at all is dropped
         if store.delete_repos_not_in([*shas, *failed]):
-            changed = True
+            changed = removed = True
         if not failed:  # a repo that failed to scan still holds rows written under the old fingerprint
             store.set_meta(CONTENT_FINGERPRINT_KEY, content)
         store.commit()
@@ -143,6 +153,9 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
             store.set_meta(RESOLVER_FINGERPRINT_KEY, fingerprint)
             store.commit()
             stats.resolved = True
+        if removed:  # deleted symbols keep their trigrams in older FTS segments until a merge
+            store.optimize_fts()
+            store.commit()
         stats.repos = len(shas)
         stats.symbols = store.count("symbols")
         stats.edges = store.count("edges")

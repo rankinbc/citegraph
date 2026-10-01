@@ -101,6 +101,49 @@ def test_rows_deleted_by_a_rewrite_leave_no_bytes_behind(make_repo: MakeRepo, re
     assert b"acme_internal_ledger" not in Path(stats.db_path).read_bytes().lower()
 
 
+# A folder name whose first trigrams occur nowhere else in the fixture (symbols fn_a ... fn_e) and not in its
+# redacted form, so any of them left in the file is residue of the raw name.
+LEDGER_FILES = {
+    f"src/qzxv_internal_ledger/m{i}.py": "".join(f"def fn_{c}():\n    pass\n\n" for c in "abcde")
+    for i in range(6)
+}
+LEDGER_PATTERN = 'extra_redaction_patterns = ["qzxv_internal_[a-z_]+"]\n'
+LEDGER_TRIGRAMS = (b"qzx", b"zxv", b"xv_")
+
+
+def ledger_residue(db_path: str) -> list[bytes]:
+    data = Path(db_path).read_bytes().lower()
+    return [t for t in (b"qzxv_internal_ledger", *LEDGER_TRIGRAMS) if t in data]
+
+
+def test_a_rewrite_leaves_no_trigram_of_a_redacted_name_in_the_fts_index(
+    make_repo: MakeRepo, repos_root: Path
+) -> None:
+    make_repo("ledger", LEDGER_FILES)
+    index_root(repos_root)
+    (repos_root / "citegraph.toml").write_text(LEDGER_PATTERN, encoding="utf-8")
+    stats = index_root(repos_root)
+    assert stats.leak_scan_clean is True
+    assert ledger_residue(stats.db_path) == []
+
+
+@pytest.mark.parametrize("edit", ["delete", "change"])
+def test_deleted_symbols_leave_no_trigram_in_the_fts_index(
+    make_repo: MakeRepo, repos_root: Path, edit: str
+) -> None:
+    text = "".join(f"def qzxv_post_{c}():\n    pass\n\n" for c in "abcde")
+    repo = make_repo("ledger", {"src/ledger/old.py": text, "src/ledger/keep.py": "def keep():\n    pass\n"})
+    index_root(repos_root)
+    if edit == "delete":
+        (repo / "src/ledger/old.py").unlink()
+    else:
+        write_files(repo, {"src/ledger/old.py": text.replace("qzxv_post_", "fn_")})
+    commit_all(repo, edit)
+    stats = index_root(repos_root)
+    assert stats.files_changed + stats.files_deleted == 1
+    assert ledger_residue(stats.db_path) == []
+
+
 def test_incremental_matches_full_reindex(sample_root: Path) -> None:
     index_root(sample_root, name="inc")
     billing = sample_root / "billing"
