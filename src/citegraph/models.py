@@ -10,7 +10,9 @@ from pydantic import BaseModel, Field
 
 SymbolKind = Literal["module", "class", "interface", "function", "method"]
 # queue: a job sent by a literal name; queue_const: by a constant (dotted reference); queue_actor: `<actor>.send(...)`
-RefKind = Literal["call", "import", "inherit", "instantiate", "queue", "queue_const", "queue_actor"]
+RefKind = Literal[
+    "call", "import", "inherit", "instantiate", "queue", "queue_const", "queue_actor", "curated"
+]
 ConfigOrigin = Literal["json", "yaml", "env-example", "code-read"]
 Source = Literal["parsed", "derived", "curated"]
 ErrorCode = Literal["not_indexed", "ambiguous_symbol", "not_found", "invalid_argument"]
@@ -32,6 +34,7 @@ class Reference(BaseModel):
     kind: RefKind
     line: int
     receiver_type: str | None = None
+    note: str | None = None  # curated links only
 
 
 class ImportFact(BaseModel):

@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from citegraph.extract.base import Extractor, module_name_for, package_for
 from citegraph.extract.configfiles import ConfigFileExtractor
 from citegraph.extract.csharp import CSharpExtractor
+from citegraph.extract.overrides import OverridesExtractor
 from citegraph.extract.python import PythonExtractor
 from citegraph.models import ExtractResult
 
@@ -10,6 +11,7 @@ EXTRACTORS: dict[str, Extractor] = {
     "python": PythonExtractor(),
     "csharp": CSharpExtractor(),
     "config": ConfigFileExtractor(),
+    "overrides": OverridesExtractor(),
 }
 
 
@@ -35,6 +37,7 @@ __all__ = [
     "CSharpExtractor",
     "ConfigFileExtractor",
     "Extractor",
+    "OverridesExtractor",
     "PythonExtractor",
     "module_name_for",
     "package_for",

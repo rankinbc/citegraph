@@ -8,10 +8,11 @@ import json
 
 # Bump when resolver logic changes, so existing indexes re-resolve on the next run. The confidence table,
 # the candidate cap and the stoplist are part of resolver_fingerprint already.
-RESOLVER_VERSION = "3"
+RESOLVER_VERSION = "4"
 
 CONFIDENCE: dict[str, float] = {
     "direct": 1.0,
+    "curated": 1.0,
     "same_file": 0.95,
     "import_scope": 0.9,
     "same_namespace": 0.9,
@@ -24,6 +25,7 @@ CONFIDENCE: dict[str, float] = {
 
 RULE_MEANING: dict[str, str] = {
     "direct": "the symbol was parsed directly from this file",
+    "curated": "declared by hand in citegraph.overrides.yaml",
     "same_file": "the name is defined in the same file as the reference",
     "import_scope": "the name was resolved through an import in the referencing file",
     "same_namespace": "the type is declared in the referencing file's namespace or a parent namespace",

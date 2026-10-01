@@ -73,6 +73,8 @@ class Store:
         columns = {str(r["name"]) for r in self.conn.execute("PRAGMA table_info(refs)")}
         if "receiver_type" not in columns:
             self._write("ALTER TABLE refs ADD COLUMN receiver_type TEXT")
+        if "note" not in columns:
+            self._write("ALTER TABLE refs ADD COLUMN note TEXT")
 
     def _write(self, sql: str, params: Sequence[object] = ()) -> sqlite3.Cursor:
         clean = [sanitize(p) if isinstance(p, str) else p for p in params]
@@ -141,9 +143,9 @@ class Store:
             )
         for r in result.references:
             self._write(
-                "INSERT INTO refs(file_id, from_qualified, to_name, kind, line, receiver_type) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (file_id, r.from_qualified, r.to_name, r.kind, r.line, r.receiver_type),
+                "INSERT INTO refs(file_id, from_qualified, to_name, kind, line, receiver_type, note) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (file_id, r.from_qualified, r.to_name, r.kind, r.line, r.receiver_type, r.note),
             )
         for i in result.imports:
             self._write(

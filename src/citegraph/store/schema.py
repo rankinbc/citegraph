@@ -21,7 +21,7 @@ CREATE INDEX IF NOT EXISTS ix_symbols_file ON symbols(file_id);
 CREATE TABLE IF NOT EXISTS refs(
   id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
   from_qualified TEXT NOT NULL, to_name TEXT NOT NULL, kind TEXT NOT NULL, line INTEGER NOT NULL,
-  receiver_type TEXT);
+  receiver_type TEXT, note TEXT);
 CREATE TABLE IF NOT EXISTS imports(
   id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
   local_name TEXT NOT NULL, target TEXT NOT NULL, line INTEGER NOT NULL);

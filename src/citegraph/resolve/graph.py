@@ -56,6 +56,7 @@ class CsImports:
 class Graph:
     by_qname: dict[str, list[Sym]] = field(default_factory=lambda: defaultdict(list))
     by_name: dict[str, list[Sym]] = field(default_factory=lambda: defaultdict(list))
+    repo_name: dict[int, str] = field(default_factory=dict[int, str])
     file_repo: dict[int, int] = field(default_factory=dict[int, int])
     file_lang: dict[int, str] = field(default_factory=dict[int, str])
     file_module: dict[int, str] = field(default_factory=dict[int, str])
@@ -68,6 +69,8 @@ class Graph:
 
 def load_graph(store: Store) -> Graph:
     graph = Graph()
+    for row in store.conn.execute("SELECT id, name FROM repos"):
+        graph.repo_name[int(row["id"])] = str(row["name"])
     for row in store.conn.execute("SELECT id, repo_id, lang, module FROM files"):
         graph.file_repo[int(row["id"])] = int(row["repo_id"])
         graph.file_lang[int(row["id"])] = str(row["lang"])

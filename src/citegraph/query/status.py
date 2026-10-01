@@ -24,12 +24,20 @@ class RunStatus(BaseModel):
     leak_scan_clean: bool | None
 
 
+class UnresolvedOverride(BaseModel):
+    path: str
+    line: int
+    from_symbol: str
+    to_symbol: str
+
+
 class StatusData(BaseModel):
     repos: list[RepoStatus]
     refs: int
     edges: int
     resolved_ratio: float
     last_run: RunStatus | None
+    overrides_unresolved: list[UnresolvedOverride]
 
 
 def status(ctx: QueryContext) -> Answer[StatusData]:
@@ -73,11 +81,21 @@ def status(ctx: QueryContext) -> Answer[StatusData]:
             parse_errors=run[0]["parse_errors"],
             leak_scan_clean=None if clean is None else bool(clean),
         )
+    unresolved = [
+        UnresolvedOverride(
+            path=r["path"], line=r["line"], from_symbol=r["from_qualified"], to_symbol=r["to_name"]
+        )
+        for r in ctx.rows(
+            "SELECT f.path, r.line, r.from_qualified, r.to_name FROM refs r JOIN files f ON f.id = r.file_id "
+            "WHERE r.kind = 'curated' AND r.id NOT IN (SELECT ref_id FROM edges) ORDER BY f.path, r.line"
+        )
+    ]
     data = StatusData(
         repos=repos,
         refs=refs,
         edges=edges,
         resolved_ratio=round(resolved / refs, 4) if refs else 1.0,
         last_run=last_run,
+        overrides_unresolved=unresolved,
     )
     return ctx.answer(data, evidence=[], sources=["parsed"], confidences=[], repos={r.name for r in repos})

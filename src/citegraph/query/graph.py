@@ -9,7 +9,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from citegraph.models import Answer, Evidence
+from citegraph.models import Answer, Evidence, Source
 from citegraph.query.common import (
     MAX_LIMIT,
     SYMBOL_SELECT,
@@ -25,7 +25,8 @@ CALL_KINDS = ("call", "instantiate")
 
 EDGE_SELECT = """
 SELECT e.id AS edge_id, e.from_symbol_id, e.to_symbol_id, e.kind AS edge_kind, e.rule, e.confidence,
-       e.candidates, rf.line AS ref_line, ff.path AS ref_path, fr.name AS ref_repo, fr.head_sha AS ref_sha
+       e.candidates, rf.line AS ref_line, rf.note AS ref_note, ff.path AS ref_path, fr.name AS ref_repo,
+       fr.head_sha AS ref_sha
 FROM edges e
 JOIN refs rf ON rf.id = e.ref_id
 JOIN files ff ON ff.id = rf.file_id
@@ -56,8 +57,14 @@ class EdgeExplanation(BaseModel):
     confidence: float
     candidates: int
     curated: bool
+    note: str | None
     path: str
     line: int
+
+
+def _sources(rules: Iterable[str]) -> list[Source]:
+    """Curated edges were declared by hand; every other edge was derived by the resolver."""
+    return ["curated" if rule == "curated" else "derived" for rule in rules] or ["derived"]
 
 
 def _edge_evidence(row: sqlite3.Row) -> Evidence:
@@ -188,7 +195,7 @@ def _traverse(
     return ctx.answer(
         items,
         evidence=evidence,
-        sources=["derived"],
+        sources=_sources(i.rule for i in items),
         confidences=[i.confidence for i in items] if items else _empty_answer_confidences(hidden),
         repos={target["repo"], *(i.symbol.repo for i in items)},
         notes=notes,
@@ -258,7 +265,7 @@ def find_path(
     return ctx.answer(
         steps,
         evidence=[_edge_evidence(row) for _, row in chain],
-        sources=["derived"],
+        sources=_sources(e.rule for e in edges),
         confidences=[e.confidence for e in edges],
         repos=repos | {s.symbol.repo for s in steps},
     )
@@ -280,7 +287,8 @@ def explain_edge(ctx: QueryContext, from_symbol: str, to_symbol: str) -> Answer[
             rule_meaning=RULE_MEANING[r["rule"]],
             confidence=r["confidence"],
             candidates=r["candidates"],
-            curated=False,
+            curated=r["rule"] == "curated",
+            note=r["ref_note"],
             path=r["ref_path"],
             line=r["ref_line"],
         )
@@ -290,7 +298,7 @@ def explain_edge(ctx: QueryContext, from_symbol: str, to_symbol: str) -> Answer[
     return ctx.answer(
         explanations,
         evidence=[_edge_evidence(r) for r in rows],
-        sources=["derived"],
+        sources=_sources(e.rule for e in explanations),
         confidences=[e.confidence for e in explanations],
         repos={source["repo"], target["repo"]},
         notes=notes,

@@ -76,6 +76,8 @@ def tracked_files(repo: Path) -> list[str]:
 
 def language_for(rel_path: str) -> str | None:
     name = rel_path.rsplit("/", 1)[-1]
+    if name == "citegraph.overrides.yaml":
+        return "overrides"
     if any(fnmatchcase(name, pattern) for pattern in CONFIG_FILE_GLOBS):
         return "config"
     return LANGUAGE_BY_EXT.get(PurePosixPath(rel_path).suffix)
@@ -100,7 +102,7 @@ def scan_repo(repo: Path, config: CitegraphConfig) -> RepoInfo:
     files: list[RepoFile] = []
     for rel in tracked_files(repo):
         lang = language_for(rel)
-        if lang is None or (lang != "config" and lang not in config.languages):
+        if lang is None or (lang not in ("config", "overrides") and lang not in config.languages):
             continue
         if not _selected(rel, config):
             continue

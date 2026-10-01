@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 
 from citegraph.resolve.csharp import CSharpResolver
+from citegraph.resolve.curated import resolve_curated
 from citegraph.resolve.graph import Graph, RefRow, Resolution, Sym, by_name, load_graph, lookup
 from citegraph.resolve.queues import QUEUE_KINDS, QueueResolver, load_queue_index
 from citegraph.resolve.rules import CONFIDENCE
@@ -95,6 +96,14 @@ def resolve_all(store: Store) -> dict[str, int]:
     refs.sort(key=lambda r: not (graph.file_lang[r.file_id] == "csharp" and r.kind == "inherit"))
     for ref in refs:
         stats["refs"] += 1
+        if ref.kind == "curated":  # both ends are named in citegraph.overrides.yaml, not defined in it
+            pair = resolve_curated(graph, ref)
+            if pair is None:
+                stats["unresolved"] += 1
+                continue
+            stats["curated"] += 1
+            rows.append(EdgeRow(ref.id, pair[0].id, pair[1].id, "call", "curated", CONFIDENCE["curated"], 1))
+            continue
         source = graph.file_syms[ref.file_id].get(ref.from_qualified)
         if source is None:
             stats["unresolved"] += 1
