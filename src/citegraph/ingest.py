@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from citegraph.config import CitegraphConfig
 
-LANGUAGE_BY_EXT = {".py": "python"}
+LANGUAGE_BY_EXT = {".py": "python", ".cs": "csharp"}
 CONFIG_FILE_GLOBS = (
     "appsettings*.json",
     "config*.json",

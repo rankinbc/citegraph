@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from citegraph import __version__
 from citegraph.config import load_config
-from citegraph.extract import EXTRACTORS, module_name_for
+from citegraph.extract import EXTRACTORS, stored_module
 from citegraph.home import index_path
 from citegraph.ingest import MAX_FILE_BYTES, IngestError, RepoInfo, discover_repos, scan_repo
 from citegraph.models import ExtractResult
@@ -103,7 +103,7 @@ def _index_repo(
             store.delete_file_id(file_id)
     results = _extract_all([(rel, lang, data) for rel, lang, _, data in todo], jobs)
     for (rel, lang, digest, data), result in zip(todo, results, strict=True):
-        module = module_name_for(rel) if lang == "python" else None
+        module = stored_module(rel, lang, result)
         store.upsert_file(repo_id, rel, lang, digest, data.count(b"\n") + 1, result, module)
     store.commit()
     stats.files_total += len(info.files)

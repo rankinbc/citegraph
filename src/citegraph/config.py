@@ -27,7 +27,7 @@ class CitegraphConfig(BaseModel):
 
     include: list[str] = Field(default_factory=list[str])
     exclude: list[str] = Field(default_factory=lambda: list(DEFAULT_EXCLUDE))
-    languages: list[str] = Field(default_factory=lambda: ["python"])
+    languages: list[str] = Field(default_factory=lambda: ["python", "csharp"])
     extra_redaction_patterns: list[str] = Field(default_factory=list[str])
 
     @field_validator("extra_redaction_patterns")

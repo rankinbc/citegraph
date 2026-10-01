@@ -8,7 +8,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from citegraph.extract import EXTRACTORS, module_name_for
+from citegraph.extract import EXTRACTORS, stored_module
 from citegraph.ingest import language_for
 from citegraph.resolve import resolve_all
 from citegraph.store import Store
@@ -64,7 +64,7 @@ def build_store(db_path: Path, repos: dict[str, dict[str, str]], resolve: bool =
                 continue
             data = text.encode("utf-8")
             result = EXTRACTORS[lang].extract(rel, data)
-            module = module_name_for(rel) if lang == "python" else None
+            module = stored_module(rel, lang, result)
             store.upsert_file(repo_id, rel, lang, "h", data.count(b"\n") + 1, result, module)
     store.commit()
     if resolve:

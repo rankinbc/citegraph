@@ -86,6 +86,7 @@ def test_repo_without_commits_raises(repos_root: Path) -> None:
     ("path", "lang"),
     [
         ("a/b.py", "python"),
+        ("src/Api/OrdersController.cs", "csharp"),
         ("appsettings.Development.json", "config"),
         ("docker-compose.yml", "config"),
         ("pyproject.toml", "config"),
@@ -105,4 +106,4 @@ def test_load_config_reads_toml(tmp_path: Path) -> None:
     cfg = load_config(tmp_path)
     assert cfg.exclude == ["legacy/**"]
     assert cfg.extra_redaction_patterns == ["ACME-[0-9]+"]
-    assert load_config(tmp_path / "missing").languages == ["python"]
+    assert load_config(tmp_path / "missing").languages == ["python", "csharp"]

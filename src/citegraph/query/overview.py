@@ -56,7 +56,7 @@ def repo_overview(ctx: QueryContext, repo: str) -> Answer[RepoOverview]:
         ModuleCount(module=r["module"], symbols=int(r["n"]))
         for r in ctx.rows(
             "SELECT f.module, count(s.id) AS n FROM files f JOIN symbols s ON s.file_id = f.id "
-            "WHERE f.repo_id = ? AND f.module IS NOT NULL GROUP BY f.module ORDER BY n DESC, f.module LIMIT 10",
+            "WHERE f.repo_id = ? AND f.module IS NOT NULL AND f.module != '' GROUP BY f.module ORDER BY n DESC, f.module LIMIT 10",
             (repo_id,),
         )
     ]

@@ -10,6 +10,7 @@ from citegraph.ingest import IngestError
 from citegraph.resolve.rules import CONFIDENCE
 from citegraph.store import Store
 from tests.fixtures.sample_corpus import BILLING, SAMPLE_EDGES, SHOP
+from tests.fixtures.sample_corpus_csharp import ORDERING
 from tests.helpers import commit_all, edge_set, git, load_secret_cases, write_files
 
 MakeRepo = Callable[[str, dict[str, str]], Path]
@@ -191,6 +192,13 @@ def test_incremental_matches_full_reindex(sample_root: Path) -> None:
         "same_file",
     ) in inc_edges
     assert not any(t == "billing.notifications.notify_customer" for _, t, _, _ in inc_edges)
+
+
+def test_csharp_can_be_turned_off_in_config(make_repo: MakeRepo, repos_root: Path) -> None:
+    make_repo("ordering", ORDERING)
+    (repos_root / "citegraph.toml").write_text('languages = ["python"]\n', encoding="utf-8")
+    store = open_index(index_root(repos_root).db_path)
+    assert [r["lang"] for r in store.conn.execute("SELECT DISTINCT lang FROM files")] == ["config"]
 
 
 def test_schema_change_rewrites_unchanged_files(sample_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
