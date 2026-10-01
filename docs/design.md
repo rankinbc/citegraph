@@ -573,7 +573,8 @@ Implements [docs/specs/2026-10-01-csharp-design.md](specs/2026-10-01-csharp-desi
 Implements [docs/specs/2026-10-01-cross-service-links-design.md](specs/2026-10-01-cross-service-links-design.md).
 
 35. **Re-export following.** A Python name imported from a package that re-exports it (`from pkg import f` where
-    `pkg/__init__.py` imports `f` from a submodule) resolves to the defining symbol. Eval delta: 0.73 -> 0.78.
+    `pkg/__init__.py` imports `f` from a submodule) resolves to the defining symbol; the referencing project's
+    modules are searched first. Eval delta: 0.73 -> 0.78.
 36. **Projects.** Opt-in with `projects = "auto"` or a list of folders in `citegraph.toml`. Auto detection: a folder
     with `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` or a `.sln`, or a `.csproj` folder with no
     `.sln` above it; the repository root is never a project. Each project is a logical repo named `<repo>/<folder>`,

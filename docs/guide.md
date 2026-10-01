@@ -122,9 +122,9 @@ repository's own logical repo.
 
 **Job queues.** citegraph links a job sent to a Dramatiq queue to the function that runs it, across languages:
 
-- Sends: C# calls named `Enqueue`/`EnqueueAsync` (configurable) whose first argument is a string literal or a
+- Sends: C# calls named `Enqueue`/`EnqueueAsync` (configurable) whose first argument is a name-shaped string literal or a
   dotted constant such as `DramatiqTasks.ClassifyStems` (a bare identifier is skipped); Python `actor.send(...)`, `actor.send_with_options(...)` and
-  `broker.enqueue(Message(actor_name="..."))`.
+  `broker.enqueue(Message(actor_name="..."))` (a literal that is not name-shaped is not a send).
 - Handlers: functions decorated with `@dramatiq.actor(...)`, under their `actor_name` or their own name.
 - The link is an edge with rule `queue_match` (confidence 0.9); two handlers with one name give `ambiguous` edges.
 

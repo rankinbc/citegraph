@@ -131,7 +131,7 @@ known weak spot, and C# is not yet benchmarked. Details: [guide](docs/guide.md#a
 
 ## Safe to leave connected
 
-- Stores names and locations only, never source code or config values.
+- Stores names and locations only, never source code or config values. The one stored value: name-shaped C# `const string` job names, redacted like everything else.
 - Redacts anything that looks like a secret, on the way into the index and again on the way out.
 - Read-only: no write or shell tools. Every call is logged locally (`citegraph audit tail`).
 - Runs on your machine. Indexing and serving make no network calls; your assistant sees only the answers it asks for.
@@ -167,8 +167,7 @@ More: [architecture](docs/architecture.md), [design notes](docs/design-notes.md)
 
 - A C# eval: scip-dotnet labels, a C# golden set and grep baseline, calibrated C# confidence and a CI gate.
 - A TypeScript extractor.
-- Curated cross-service edges (for example, an HTTP call from one service to another's handler).
-- Package-root detection for monorepos and re-export following.
+- HTTP links between services (queue links and hand-written links ship today).
 - An agent-level eval: does an agent answer better and cheaper with citegraph than with grep alone?
 
 ## License

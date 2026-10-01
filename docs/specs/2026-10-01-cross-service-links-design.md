@@ -1,7 +1,7 @@
 # citegraph cross-service links - Design Spec
 
 Date: 2026-10-01
-Status: Design approved in conversation; spec under review; implementation plan not yet written
+Status: Implemented (plan `.superpowers/plans/2026-10-01-cross-service-links.md`, branch `cross-service-links`)
 Extends: [docs/design.md](../design.md) and [the C# design](2026-10-01-csharp-design.md). Where this file is silent,
 those rules hold.
 
@@ -68,7 +68,8 @@ repository under the root.
 `pyproject.toml`, `setup.py`, `setup.cfg` or `requirements.txt` (Python), or a `*.sln` file (C#). A folder holding a
 `*.csproj` is a project root only when no folder above it in the same repository holds a `*.sln`, so a .NET solution
 stays one project. The repository root is never split off as a project of its own; files not under any project root
-stay in a logical repo for the repository itself.
+stay in a logical repo for the repository itself. A repository that fails to scan keeps its projects' rows until the
+next good run.
 
 **Assignment.** Each tracked file belongs to its nearest project root (the deepest one above it). Nested project roots
 take their own files away from the outer project.
@@ -92,11 +93,12 @@ Three new kinds of facts, each with the location it came from:
 | Fact | C# | Python |
 |---|---|---|
 | **Queue send**: a job name sent by a symbol | an invocation whose method name is in `queues.send_methods` (default `Enqueue`, `EnqueueAsync`) and whose first argument is a string literal or a member access (`DramatiqTasks.ClassifyStems`) | `<actor>.send(...)` and `<actor>.send_with_options(...)`, where `<actor>` is a name or dotted name; `<x>.enqueue(Message(actor_name="name", ...))` with a literal name |
-| **Queue handler**: a job name a function handles | (none in this phase) | a function decorated with `@dramatiq.actor(...)` or `@actor(...)`: its `actor_name="..."` keyword, or the function's own name when that keyword is absent |
+| **Queue handler**: a job name a function handles | (none in this phase) | a function decorated with `@dramatiq.actor` or `@actor`, with or without arguments: its `actor_name="..."` keyword, or the function's own name when that keyword is absent |
 | **String constant** | a `const string` field whose value matches `^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$` | (none in this phase) |
 
 A send whose job name is neither a literal nor a member access (a variable, a parameter, an interpolated string) is
-not recorded: a queue implementation that forwards `taskName` is not a send.
+not recorded: a queue implementation that forwards `taskName` is not a send. A literal job name is recorded only
+when it matches the same name shape as a constant.
 
 `queues.send_methods` is configurable in `citegraph.toml`:
 
@@ -108,14 +110,16 @@ send_methods = ["Enqueue", "EnqueueAsync", "PublishJob"]
 **String constants and the security model.** citegraph stores names and locations, never values. Job names behind
 constants are the one exception, and it is narrow: only `const string` fields, only values shaped like identifiers
 (no spaces, no `/`, at most 64 characters), and every value still goes through the sanitizing write path, so a
-secret-shaped value is redacted before it is stored and the post-run leak scan covers the new table. The
+secret-shaped value is redacted before it is stored and the post-run leak scan covers the new tables. The
 exception is documented in the README's security section and in `docs/design.md` section 7.
 
 ### Data model
 
-- `queue_sends(file_id, from_qualified, protocol, name_kind, name, line)`: `protocol` is `dramatiq`; `name_kind` is
-  `literal`, `constant` (a dotted reference to a constant, resolved later) or `actor` (Python `x.send`: a reference to
-  the actor function, resolved later).
+- Sends are rows in `refs` (an edge needs a reference row for its evidence, `edges.ref_id`): `from_qualified` is the
+  sending symbol and `line` the send's location. `kind` is `queue` (`to_name` is the literal job name), `queue_const`
+  (`to_name` is a dotted reference to a constant, resolved later) or `queue_actor` (Python `x.send`; `to_name` is the
+  receiver, resolved later to the actor function). The protocol is `dramatiq` for every send until a second queue
+  library is added.
 - `queue_handlers(file_id, handler_qualified, protocol, name, line)`.
 - `string_consts(file_id, qualified_name, value, line)`.
 - Matching models in `models.py` (`QueueSend`, `QueueHandler`, `StringConst`) and fields on `ExtractResult`.
@@ -143,8 +147,9 @@ evidence is the send's location.
 ## 4. Python re-export following
 
 When a Python import target cannot be found as a symbol (`from audio_analysis.stems import classify_stems`, where
-`classify_stems` is defined in `audio_analysis/stems/classify.py`), the resolver looks at the target's package
-module (`audio_analysis.stems`, its `__init__.py`): if that module imports the name, the lookup follows that import.
+`classify_stems` is defined in `audio_analysis/stems/classify.py`), the resolver looks at the module the name is
+imported from (`audio_analysis.stems`; any module, packages are the common case), searched in the referencing
+project first: if that module imports the name, the lookup follows that import.
 This repeats for at most 3 hops and stops on a cycle. The rule stays `import_scope`. It applies to both call
 references and `import` references.
 
@@ -157,7 +162,8 @@ and the "Re-exports are not followed" limitation are updated to match.
 
 As designed in `docs/design.md` (Curated overrides), with one change: the file is
 `citegraph.overrides.yaml` tracked in any indexed repository (not only at the index root), so its evidence has a
-repository, a path and a commit like every other edge.
+repository, a path and a commit like every other edge. Names are exact qualified names; only `kind: call`; the note
+is stored in `refs.note`; an answer mixing curated and derived edges reports `derived`.
 
 ```yaml
 edges:
