@@ -280,7 +280,7 @@ Three layers, in order of importance:
    exports) passes `sanitize()`:
    - Known secret shapes: cloud access keys, GitHub/Slack/OpenAI/Anthropic token prefixes, PEM private keys,
      JWTs, connection-string credential segments (keeps `Server`/`Database`, drops `User`/`Password`/`Key`).
-   - High-entropy tokens above a length and entropy threshold.
+   - High-entropy tokens above a length and entropy threshold, except identifiers made of words (decision 40).
    - Matches become `<redacted:kind>`.
    - Extra patterns configurable in `citegraph.toml`.
 3. **Leak scanner.** `citegraph leak-scan <paths>` scans files with the same rules; a SQLite file is scanned cell
@@ -590,3 +590,16 @@ Implements [docs/specs/2026-10-01-cross-service-links-design.md](specs/2026-10-0
     the entry's `note` in `refs.note`. Names must match a qualified name exactly, optionally prefixed `repo:`. Entries
     whose names match nothing or more than one are listed by `status` as `overrides_unresolved`. The evidence source
     is the line in the overrides file.
+
+### Identifier redaction (2026-10-01)
+
+40. **Long identifiers are names.** EF Core migration files (`20260615134159_AddCoachConversations.cs`) and long
+    test-method names passed the entropy rule: a timestamp or a number next to several words is high-entropy by
+    character count. A token of letters, digits, "_" and "-" is exempt when it reads as words: split into number
+    runs, words and acronyms, it has at most three number runs, words of mean length 3 or more with vowels and no
+    run of five consonants, acronyms of at most five letters and at most one stray letter. On the monorepo that
+    showed it, 29 of 30 such names now pass; 0.00%-0.04% of random 32-64 character keys take the exemption, and
+    known secret shapes are matched by their own patterns first.
+41. **Redacted paths stay distinct.** The indexer keys a file by its sanitized path, so two paths that redacted
+    alike shared one row: the second file replaced the first and both were extracted again on every run. A redacted
+    path's markers now carry eight hex digits of a hash of the raw path (`<redacted:kind~1a2b3c4d>`).

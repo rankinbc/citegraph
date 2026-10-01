@@ -17,7 +17,7 @@ from citegraph.extract.csharp import DEFAULT_SEND_METHODS
 from citegraph.home import index_path
 from citegraph.ingest import MAX_FILE_BYTES, IngestError, RepoInfo, discover_repos, scan_projects
 from citegraph.models import ExtractResult
-from citegraph.redact import configure_extra_patterns, redaction_fingerprint, sanitize
+from citegraph.redact import configure_extra_patterns, redaction_fingerprint, sanitize_path
 from citegraph.redact.leakscan import scan_paths
 from citegraph.resolve import resolve_all
 from citegraph.resolve.rules import resolver_fingerprint
@@ -96,7 +96,7 @@ def _index_repo(
         if file.size > MAX_FILE_BYTES:
             stats.skipped_large += 1
             continue
-        key = sanitize(file.rel_path)
+        key = sanitize_path(file.rel_path)
         current.add(key)
         data = (info.path / file.rel_path).read_bytes()
         digest = hashlib.blake2b(data, digest_size=16).hexdigest()
@@ -115,7 +115,7 @@ def _index_repo(
     results = _extract_all([(rel, lang, data, send_methods) for rel, lang, _, data in todo], jobs)
     for (rel, lang, digest, data), result in zip(todo, results, strict=True):
         module = stored_module(rel, lang, result)
-        store.upsert_file(repo_id, rel, lang, digest, data.count(b"\n") + 1, result, module)
+        store.upsert_file(repo_id, sanitize_path(rel), lang, digest, data.count(b"\n") + 1, result, module)
     store.commit()
     stats.files_total += len(info.files)
     stats.files_changed += len(todo)

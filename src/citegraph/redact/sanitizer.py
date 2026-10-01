@@ -19,6 +19,12 @@ from citegraph.redact.patterns import (
     ENTROPY_MIN_LENGTH,
     ENTROPY_THRESHOLD,
     ENTROPY_TOKEN,
+    IDENTIFIER_CONSONANT_CLUSTER,
+    IDENTIFIER_MAX_ACRONYM,
+    IDENTIFIER_MAX_NUMBER_RUNS,
+    IDENTIFIER_MAX_WORD,
+    IDENTIFIER_MIN_MEAN_WORD,
+    IDENTIFIER_RUN,
     PATH_WORD,
     SecretPattern,
 )
@@ -51,6 +57,12 @@ def redaction_fingerprint() -> str:
                 BASE64_MIN_CLASS_CHANGE_RATE,
                 ASSIGNMENT.pattern,
                 PATH_WORD.pattern,
+                IDENTIFIER_RUN.pattern,
+                IDENTIFIER_MAX_NUMBER_RUNS,
+                IDENTIFIER_MIN_MEAN_WORD,
+                IDENTIFIER_MAX_WORD,
+                IDENTIFIER_MAX_ACRONYM,
+                IDENTIFIER_CONSONANT_CLUSTER.pattern,
             ],
         ]
     )
@@ -68,7 +80,33 @@ def is_high_entropy(token: str) -> bool:
         any(ch.isdigit() for ch in token)
         and any(ch.isalpha() for ch in token)
         and shannon_entropy(token) > ENTROPY_THRESHOLD
+        and not is_identifier_shaped(token)
     )
+
+
+def _word_shaped(word: str) -> bool:
+    if len(word) == 1:
+        return True
+    if word.isupper():
+        return len(word) <= IDENTIFIER_MAX_ACRONYM
+    if len(word) > IDENTIFIER_MAX_WORD or IDENTIFIER_CONSONANT_CLUSTER.search(word):
+        return False
+    return len(word) < 3 or any(ch in "aeiouyAEIOUY" for ch in word)
+
+
+def is_identifier_shaped(token: str) -> bool:
+    """True when a token of letters, digits, "_" and "-" reads as a name made of words rather than a random value."""
+    if any(not (ch.isascii() and (ch.isalnum() or ch in "_-")) for ch in token):
+        return False
+    runs = IDENTIFIER_RUN.findall(token)
+    words = [run for run in runs if not run.isdigit()]
+    if not words or len(runs) - len(words) > IDENTIFIER_MAX_NUMBER_RUNS:
+        return False
+    if sum(len(word) == 1 for word in words) > 1:
+        return False
+    if sum(map(len, words)) / len(words) < IDENTIFIER_MIN_MEAN_WORD:
+        return False
+    return all(_word_shaped(word) for word in words)
 
 
 def _char_class(ch: str) -> str:
@@ -197,6 +235,20 @@ def sanitize(text: str) -> str:
         pos = hit.end
     out.append(text[pos:])
     return "".join(out)
+
+
+_MARKER = re.compile(r"<redacted:([a-z-]+)>")
+
+
+def sanitize_path(path: str) -> str:
+    """`sanitize`, with each redaction marker tagged by a short hash of the whole path (`<redacted:kind~1a2b3c4d>`),
+    so two files whose paths redact alike keep their own rows. Eight hex digits cannot be inverted to a redacted
+    value of 32 or more random characters, and a name a redaction pattern caught by mistake is not a secret."""
+    sanitized = sanitize(path)
+    if sanitized == path:
+        return path
+    tag = hashlib.blake2b(path.encode("utf-8"), digest_size=4).hexdigest()
+    return _MARKER.sub(lambda m: f"<redacted:{m.group(1)}~{tag}>", sanitized)
 
 
 def sanitize_obj(obj: object) -> object:

@@ -1,9 +1,11 @@
 import base64
 import random
+import string
 
 import pytest
 
 from citegraph.redact import configure_extra_patterns, find_secrets, sanitize, sanitize_obj
+from citegraph.redact.sanitizer import is_high_entropy, is_identifier_shaped
 from tests.helpers import SecretCase, load_secret_cases
 
 CASES = load_secret_cases()
@@ -179,3 +181,48 @@ def test_sanitize_is_idempotent(case: SecretCase) -> None:
     once = sanitize(case.value)
     assert sanitize(once) == once
     assert find_secrets(once) == []
+
+
+# Long identifiers: EF Core migration names, test-method names. A timestamp or a number next to words reads as
+# high entropy, but the words make them names, not values.
+IDENTIFIERS = [
+    "components/bff/src/Spectr.Data/Migrations/20260615134159_AddCoachConversations.Designer.cs",
+    "Migrations/20260616052555_AddFeatureFlagsAndJobTier.cs",
+    "Spectr.Data.Migrations.20260615232144_AddSubscriptionsAndWebhookEvents",
+    "ClassifyStems_WhenVersionMissing_Returns404NotFound",
+    "Should_Return_BadRequest_When_StemCountExceeds12",
+    "GetUserById_Returns200_WhenUserExists_InDb2",
+]
+
+
+@pytest.mark.parametrize("text", IDENTIFIERS)
+def test_long_identifier_passes_through(text: str) -> None:
+    assert sanitize(text) == text
+
+
+def random_high_entropy_tokens(seed: int, alphabet: str, count: int = 5000) -> list[str]:
+    rng = random.Random(seed)
+    tokens: list[str] = []
+    while len(tokens) < count:
+        token = "".join(rng.choice(alphabet) for _ in range(rng.choice([32, 40, 48, 64])))
+        if is_high_entropy(token) or is_identifier_shaped(token):
+            tokens.append(token)
+    return tokens
+
+
+@pytest.mark.parametrize(
+    "alphabet",
+    [
+        string.ascii_letters + string.digits,
+        string.ascii_lowercase + string.digits,
+        string.ascii_uppercase + string.digits,
+        string.ascii_letters + string.digits + "-_",
+    ],
+    ids=["alnum", "base36", "BASE36", "base64url"],
+)
+def test_random_tokens_are_rarely_identifier_shaped(alphabet: str) -> None:
+    """Of 5000 random high-entropy tokens per alphabet, the share the identifier shape lets through. Measured
+    (seed 20261001): 0.00%-0.04%; real identifiers at 32+ characters: 29 of 30 in the monorepo that showed it."""
+    tokens = random_high_entropy_tokens(20261001, alphabet)
+    assert sum(is_identifier_shaped(t) for t in tokens) / len(tokens) <= 0.001
+    assert sum(sanitize(t) == t for t in tokens) / len(tokens) <= 0.001

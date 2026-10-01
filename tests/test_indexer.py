@@ -1,3 +1,4 @@
+import re
 import sqlite3
 from collections.abc import Callable
 from pathlib import Path
@@ -89,7 +90,8 @@ def test_new_extra_pattern_matching_a_stored_path_leaves_one_redacted_row(
             paths = [r["path"] for r in store.conn.execute("SELECT path FROM files")]
         finally:
             store.close()
-        assert paths == ["src/<redacted:custom>/core.py"]
+        assert len(paths) == 1
+        assert re.fullmatch(r"src/<redacted:custom~[0-9a-f]{8}>/core\.py", paths[0])
 
 
 def test_rows_deleted_by_a_rewrite_leave_no_bytes_behind(make_repo: MakeRepo, repos_root: Path) -> None:
@@ -283,3 +285,32 @@ def test_no_secret_reaches_the_database(make_repo: MakeRepo, repos_root: Path) -
     for secret in secrets:
         # lower-cased on both sides: normalized config keys must not carry a secret in lower case
         assert secret.lower().encode() not in db_bytes
+
+
+def test_two_files_whose_paths_redact_alike_keep_their_own_rows(
+    make_repo: MakeRepo, repos_root: Path
+) -> None:
+    make_repo(
+        "ledger",
+        {
+            "src/acme_internal_a/core.py": "def post_a():\n    pass\n",
+            "src/acme_internal_b/core.py": "def post_b():\n    pass\n",
+        },
+    )
+    (repos_root / "citegraph.toml").write_text(
+        'extra_redaction_patterns = ["acme_internal_[a-z_]+"]\n', "utf-8"
+    )
+    stats = index_root(repos_root)
+    assert stats.leak_scan_clean is True
+    store = open_index(stats.db_path)
+    try:
+        rows = store.conn.execute(
+            "SELECT f.path, s.name FROM files f JOIN symbols s ON s.file_id = f.id WHERE s.kind = 'function'"
+        ).fetchall()
+    finally:
+        store.close()
+    assert sorted(r["name"] for r in rows) == ["post_a", "post_b"]
+    paths = {r["path"] for r in rows}
+    assert len(paths) == 2
+    assert all(p.startswith("src/<redacted:custom~") and p.endswith(">/core.py") for p in paths)
+    assert index_root(repos_root).files_changed == 0

@@ -5,6 +5,7 @@ from citegraph.redact.sanitizer import (
     redaction_fingerprint,
     sanitize,
     sanitize_obj,
+    sanitize_path,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "redaction_fingerprint",
     "sanitize",
     "sanitize_obj",
+    "sanitize_path",
 ]

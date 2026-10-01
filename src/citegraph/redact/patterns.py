@@ -58,6 +58,18 @@ ENTROPY_THRESHOLD = 4.2
 # and change far less often (sanitizer.is_base64_shaped).
 BASE64_MIN_CLASS_CHANGE_RATE = 0.45
 
+# A long identifier (an EF Core migration `20260615134159_AddCoachConversations`, a test method
+# `GetUser_Returns404_WhenMissing`) is high-entropy by character count but made of words: split into runs of
+# digits, capitalized or lower-case words and upper-case acronyms, it has few number runs, words of word length
+# with vowels, short acronyms and at most one stray letter. Random keys almost never do (sanitizer.is_identifier_shaped;
+# 0.00%-0.04% of random high-entropy tokens in tests/redact/test_sanitizer.py).
+IDENTIFIER_RUN = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|[0-9]+")
+IDENTIFIER_MAX_NUMBER_RUNS = 3
+IDENTIFIER_MIN_MEAN_WORD = 3.0
+IDENTIFIER_MAX_WORD = 16
+IDENTIFIER_MAX_ACRONYM = 5
+IDENTIFIER_CONSONANT_CLUSTER = re.compile(r"[^aeiouyAEIOUY]{5,}")
+
 # An assignment "=" inside a token holding "/" (`AWS_SECRET_ACCESS_KEY=<value>` is one token): the key and the
 # value are judged apart. An "=" before another "=" or at the end of the token is base64 padding and stays.
 ASSIGNMENT = re.compile(r"=(?=[^=])")
