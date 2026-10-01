@@ -181,6 +181,10 @@ The leak scanner is also a pre-commit hook (`citegraph-leak-scan` in `.pre-commi
   ambiguous and hidden by default. This is the largest cause of lost recall in the eval.
 - **`self` in nested functions and inherited methods.** `self.m()` inside a closure, or where `m` is defined on a
   base class in another file, falls back to name matching.
+- **Nested package roots.** A module is named by its path from the repo root, or from a top-level `src/`.
+  Imports into packages nested deeper, such as a monorepo's `services/<name>/<pkg>/` or a `backend/app/`
+  layout, resolve only when the import path matches that full path; finding package roots from
+  `pyproject.toml` or `__init__.py` is planned for M2.
 - **Re-exports are not followed.** `from flask import Response` does not reach `flask.wrappers.Response`, so one
   eval question misses all 15 callers.
 - **Stoplist and candidate cap.** Common names (`close`, `add`), dunders such as `super().__init__()`, and names

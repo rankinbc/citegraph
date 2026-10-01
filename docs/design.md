@@ -451,3 +451,12 @@ The agent-guardrails companion is built between M1 and M2.
     `Store.upsert()`); it sanitizes every `str` parameter. Connection-string credential values containing `<` or
     `>` are redacted in full, and an existing `<redacted:kind>` marker is never matched again, so sanitizing is
     idempotent and the post-run leak scan does not flag values that are already redacted.
+
+### Final review fixes (2026-09-30)
+
+18. **Python package roots deferred to M2.** Section 5 lists "package roots found by `pyproject.toml` or
+    `__init__.py`". M1 names a module by its path from the repo root, dropping a top-level `src/` only, so
+    imports into packages nested below the root (a monorepo's `services/<name>/<pkg>/`, a `backend/app/` layout)
+    resolve only when the import path matches that full path. Changing module naming would rename test modules
+    in the pinned eval corpus and invalidate the golden set and the calibration in item 10, so package-root
+    discovery moves to M2. The README lists it under Limitations. (Amends section 5.)
