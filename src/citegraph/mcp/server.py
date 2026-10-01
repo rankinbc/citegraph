@@ -1,5 +1,6 @@
 """Read-only stdio MCP server. Nine tools, every call audited, every response sanitized."""
 
+import inspect
 import logging
 import time
 from collections.abc import Callable
@@ -60,28 +61,29 @@ class ToolRunner:
         return self._ctx
 
     def run(
-        self, tool: str, args: dict[str, object], fn: Callable[[QueryContext], Answer[Any]], client: str
+        self, tool: str, args: dict[str, object], fn: Callable[..., Answer[Any]], client: str
     ) -> dict[str, object]:
+        """Call `fn(context, **args)`, audited and sanitized; every failure is {error, message, hint, data}.
+
+        The arguments are bound to fn's signature before the call, so only a binding failure is
+        `invalid_argument`; a TypeError raised inside the tool is `internal` like any other bug.
+        """
         started = time.perf_counter()
         error: str | None = None
         count = 0
         payload: dict[str, object]
         try:
-            answer = fn(self.context())
+            try:
+                inspect.signature(fn).bind(None, **args)  # None stands in for the query context
+            except TypeError as exc:
+                raise ToolError("invalid_argument", str(exc), hint="check the tool's arguments") from exc
+            answer = fn(self.context(), **args)
             data = answer.data
             count = len(cast(list[object], data)) if isinstance(data, list) else 1
             payload = answer.model_dump(mode="json")
         except ToolError as exc:
             error = exc.code
             payload = exc.to_dict()
-        except TypeError as exc:
-            error = "invalid_argument"
-            payload = {
-                "error": "invalid_argument",
-                "message": str(exc),
-                "hint": "check the tool's arguments",
-                "data": [],
-            }
         except Exception:
             log.exception("tool %s failed", tool)
             error = "internal"
@@ -129,14 +131,12 @@ def build_server(db_path: Path, audit: AuditLog | None = None) -> MCPServer[Any]
     ) -> dict[str, object]:
         """Fuzzy search symbol names. kind: module|class|interface|function|method. Returns path:line evidence."""
         args: dict[str, object] = {"query": query, "kind": kind, "repo": repo, "limit": limit}
-        return runner.run(
-            "search_symbols", args, lambda q: q_search_symbols(q, query, kind, repo, limit), _client(ctx)
-        )
+        return runner.run("search_symbols", args, q_search_symbols, _client(ctx))
 
     @mcp.tool()
     def get_symbol(name: str, ctx: Context[Any, Any]) -> dict[str, object]:
         """Look up one symbol (bare, qualified, or repo:qualified). Ambiguous names return candidates."""
-        return runner.run("get_symbol", {"name": name}, lambda q: q_get_symbol(q, name), _client(ctx))
+        return runner.run("get_symbol", {"name": name}, q_get_symbol, _client(ctx))
 
     @mcp.tool()
     def what_calls(
@@ -151,9 +151,7 @@ def build_server(db_path: Path, audit: AuditLog | None = None) -> MCPServer[Any]
             "min_confidence": min_confidence,
             "limit": limit,
         }
-        return runner.run(
-            "what_calls", args, lambda q: q_what_calls(q, symbol, depth, min_confidence, limit), _client(ctx)
-        )
+        return runner.run("what_calls", args, q_what_calls, _client(ctx))
 
     @mcp.tool()
     def what_does_it_call(
@@ -168,12 +166,7 @@ def build_server(db_path: Path, audit: AuditLog | None = None) -> MCPServer[Any]
             "min_confidence": min_confidence,
             "limit": limit,
         }
-        return runner.run(
-            "what_does_it_call",
-            args,
-            lambda q: q_what_does_it_call(q, symbol, depth, min_confidence, limit),
-            _client(ctx),
-        )
+        return runner.run("what_does_it_call", args, q_what_does_it_call, _client(ctx))
 
     @mcp.tool()
     def find_path(
@@ -190,37 +183,25 @@ def build_server(db_path: Path, audit: AuditLog | None = None) -> MCPServer[Any]
             "max_depth": max_depth,
             "min_confidence": min_confidence,
         }
-        return runner.run(
-            "find_path",
-            args,
-            lambda q: q_find_path(q, from_symbol, to_symbol, max_depth, min_confidence),
-            _client(ctx),
-        )
+        return runner.run("find_path", args, q_find_path, _client(ctx))
 
     @mcp.tool()
     def find_config_key(pattern: str, ctx: Context[Any, Any], limit: int = 25) -> dict[str, object]:
         """Where config keys are defined (json/yaml/env example) and read in code. `*` is a wildcard.
         A:B, A__B and a.b spellings match each other. Values are never returned."""
         return runner.run(
-            "find_config_key",
-            {"pattern": pattern, "limit": limit},
-            lambda q: q_find_config_key(q, pattern, limit),
-            _client(ctx),
+            "find_config_key", {"pattern": pattern, "limit": limit}, q_find_config_key, _client(ctx)
         )
 
     @mcp.tool()
     def repo_overview(repo: str, ctx: Context[Any, Any]) -> dict[str, object]:
         """Languages, top modules, entry points and fan-in hotspots for one indexed repo."""
-        return runner.run("repo_overview", {"repo": repo}, lambda q: q_repo_overview(q, repo), _client(ctx))
+        return runner.run("repo_overview", {"repo": repo}, q_repo_overview, _client(ctx))
 
     @mcp.tool()
     def explain_edge(from_symbol: str, to_symbol: str, ctx: Context[Any, Any]) -> dict[str, object]:
         """Why citegraph believes from_symbol calls to_symbol: rule, meaning, confidence, evidence."""
-        return runner.run(
-            "explain_edge",
-            {"from_symbol": from_symbol, "to_symbol": to_symbol},
-            lambda q: q_explain_edge(q, from_symbol, to_symbol),
-            _client(ctx),
-        )
+        args: dict[str, object] = {"from_symbol": from_symbol, "to_symbol": to_symbol}
+        return runner.run("explain_edge", args, q_explain_edge, _client(ctx))
 
     return mcp

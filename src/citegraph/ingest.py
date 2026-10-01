@@ -50,6 +50,10 @@ def _git(repo: Path, *args: str) -> str:
         )
     except subprocess.CalledProcessError as exc:
         raise IngestError(f"git {args[0]} failed in {repo.name}: {exc.stderr.strip()}") from exc
+    except OSError as exc:
+        raise IngestError(f"could not run git ({exc}); install git and make sure it is on PATH") from exc
+    except UnicodeDecodeError as exc:
+        raise IngestError(f"git {args[0]} in {repo.name} printed output that is not valid UTF-8") from exc
     return out.stdout
 
 

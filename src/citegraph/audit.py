@@ -52,6 +52,18 @@ class AuditLog:
                     out.append(cast(dict[str, object], json.loads(line)))
         return out
 
+    def tail(self, count: int) -> list[dict[str, object]]:
+        """The last `count` entries, oldest first, reading day files newest-first until there are enough."""
+        if count <= 0 or not self.directory.is_dir():
+            return []
+        out: list[dict[str, object]] = []
+        for path in sorted(self.directory.glob("*.jsonl"), reverse=True):
+            lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+            out[:0] = [cast(dict[str, object], json.loads(line)) for line in lines[-(count - len(out)) :]]
+            if len(out) >= count:
+                break
+        return out
+
 
 def _p95(values: list[float]) -> float:
     ordered = sorted(values)

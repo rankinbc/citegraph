@@ -10,7 +10,7 @@ from pathlib import Path
 import click
 
 from citegraph.config import ConfigError
-from citegraph.evaluation.corpus import fetch_corpus, load_corpus
+from citegraph.evaluation.corpus import CorpusError, fetch_corpus, load_corpus
 from citegraph.evaluation.golden import load_golden
 from citegraph.evaluation.report import check_regression, write_baseline, write_report
 from citegraph.evaluation.runner import Level1Result, run_level1
@@ -33,7 +33,11 @@ def eval_group() -> None:
 @click.option("--corpus", "corpus_file", type=FILE, default=Path("eval/corpus.yaml"), show_default=True)
 def eval_fetch(corpus_file: Path) -> None:
     """Clone the pinned corpus repos into the citegraph home."""
-    for path in fetch_corpus(load_corpus(corpus_file), corpus_dir() / "repos"):
+    try:
+        paths = fetch_corpus(load_corpus(corpus_file), corpus_dir() / "repos")
+    except CorpusError as exc:
+        raise click.ClickException(sanitize(str(exc))) from exc
+    for path in paths:
         click.echo(f"ready: {path}")
 
 
@@ -58,10 +62,10 @@ def eval_run(
 ) -> None:
     """Index the corpus, answer the golden questions, score citegraph against grep."""
     root = corpus_dir() / "repos"
-    fetch_corpus(load_corpus(corpus_file), root)
     try:
+        fetch_corpus(load_corpus(corpus_file), root)
         stats = index_root(root, name="eval-corpus")
-    except ConfigError as exc:
+    except (CorpusError, ConfigError) as exc:
         raise click.ClickException(sanitize(str(exc))) from exc
     click.echo(f"indexed corpus: {stats.symbols} symbols, {stats.edges} edges in {stats.duration_s:.1f}s")
     questions = [q for q in load_golden(golden) if subset == "all" or q.ci]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -13,24 +14,57 @@ from citegraph import __version__
 from citegraph.audit import AuditLog, summarize
 from citegraph.cli.eval_commands import eval_group
 from citegraph.config import ConfigError, load_config
-from citegraph.home import index_path
+from citegraph.home import check_index_name, index_path
 from citegraph.indexer import index_root
 from citegraph.ingest import IngestError
 from citegraph.query import TOOLS
 from citegraph.redact import configure_extra_patterns, sanitize
 from citegraph.redact.leakscan import scan_paths
 
-ROOT = click.Path(exists=True, file_okay=False, path_type=Path)
+
+class RootPath(click.Path):
+    """An existing directory; a leading `~` is expanded first, so MCP JSON configs (no shell) can use it."""
+
+    def convert(
+        self, value: str | os.PathLike[str], param: click.Parameter | None, ctx: click.Context | None
+    ) -> str | bytes | os.PathLike[str]:
+        if isinstance(value, str):
+            value = os.path.expanduser(value)
+        return super().convert(value, param, ctx)
+
+
+ROOT = RootPath(exists=True, file_okay=False, path_type=Path)
+
+# Numeric tool parameters. Every other KEY=VALUE stays a string, so `query=404` searches for "404".
+NUMERIC_PARAMS: dict[str, type[int] | type[float]] = {
+    "depth": int,
+    "limit": int,
+    "max_depth": int,
+    "min_confidence": float,
+}
 
 
 def _parse_param(raw: str) -> tuple[str, object]:
     if "=" not in raw:
         raise click.BadParameter(f"expected KEY=VALUE, got {raw!r}", param_hint="PARAMS")
     key, value = raw.split("=", 1)
-    try:
-        return key, json.loads(value)
-    except json.JSONDecodeError:
+    convert = NUMERIC_PARAMS.get(key)
+    if convert is None:
         return key, value
+    try:
+        return key, convert(value)
+    except ValueError as exc:
+        kind = "an integer" if convert is int else "a number"
+        raise click.BadParameter(f"{key} must be {kind}", param_hint="PARAMS") from exc
+
+
+def _index_name(_ctx: click.Context, _param: click.Parameter, value: str | None) -> str | None:
+    if value is None:
+        return None
+    try:
+        return check_index_name(value)
+    except ValueError as exc:
+        raise click.BadParameter(sanitize(str(exc))) from exc
 
 
 def _configure_redaction(root: Path) -> None:
@@ -52,8 +86,15 @@ main.add_command(eval_group)
 
 @main.command()
 @click.argument("root", type=ROOT)
-@click.option("--name", default=None, help="Index name (defaults to the root folder name).")
-@click.option("--jobs", type=int, default=None, help="Worker processes for parsing (default: CPU count).")
+@click.option(
+    "--name", default=None, callback=_index_name, help="Index name (defaults to the root folder name)."
+)
+@click.option(
+    "--jobs",
+    type=click.IntRange(min=1),
+    default=None,
+    help="Worker processes for parsing (default: CPU count).",
+)
 def index(root: Path, name: str | None, jobs: int | None) -> None:
     """Index every git repo under ROOT (or ROOT itself if it is a repo)."""
     try:
@@ -61,7 +102,7 @@ def index(root: Path, name: str | None, jobs: int | None) -> None:
     except (IngestError, ConfigError) as exc:
         raise click.ClickException(sanitize(str(exc))) from exc
     for warning in stats.warnings:
-        click.echo(f"warning: {warning}", err=True)
+        click.echo(f"warning: {sanitize(warning)}", err=True)
     click.echo(
         f"indexed {stats.repos} repos: {stats.files_changed} files changed, {stats.files_deleted} deleted, "
         f"{stats.skipped_large} skipped (too large), {stats.symbols} symbols, {stats.edges} edges "
@@ -78,7 +119,7 @@ def index(root: Path, name: str | None, jobs: int | None) -> None:
 
 @main.command()
 @click.option("--root", required=True, type=ROOT)
-@click.option("--name", default=None)
+@click.option("--name", default=None, callback=_index_name)
 def serve(root: Path, name: str | None) -> None:
     """Run the read-only MCP server over stdio."""
     from citegraph.mcp.server import build_server  # imported here: keeps `citegraph --help` fast
@@ -92,16 +133,15 @@ def _run_tool(tool: str, kwargs: dict[str, object], root: Path, name: str | None
     from citegraph.mcp.server import ToolRunner
 
     _configure_redaction(root)
-    fn = TOOLS[tool]
     runner = ToolRunner(index_path(root, name), AuditLog())
-    return runner.run(tool, kwargs, lambda ctx: fn(ctx, **kwargs), client="cli")
+    return runner.run(tool, kwargs, TOOLS[tool], client="cli")
 
 
 @main.command()
 @click.argument("tool")
 @click.argument("params", nargs=-1)
 @click.option("--root", required=True, type=ROOT)
-@click.option("--name", default=None)
+@click.option("--name", default=None, callback=_index_name)
 def query(tool: str, params: tuple[str, ...], root: Path, name: str | None) -> None:
     """Run one tool, e.g. `citegraph query what_calls symbol=charge depth=2 --root ~/src`."""
     if tool not in TOOLS:
@@ -114,7 +154,7 @@ def query(tool: str, params: tuple[str, ...], root: Path, name: str | None) -> N
 
 @main.command()
 @click.option("--root", required=True, type=ROOT)
-@click.option("--name", default=None)
+@click.option("--name", default=None, callback=_index_name)
 def status(root: Path, name: str | None) -> None:
     """Show what is indexed and whether it is stale."""
     payload = _run_tool("status", {}, root, name)
@@ -131,7 +171,7 @@ def audit() -> None:
 @audit.command("tail")
 @click.option("-n", "count", default=20, show_default=True)
 def audit_tail(count: int) -> None:
-    for entry in AuditLog().entries(days=1)[-count:]:
+    for entry in AuditLog().tail(count):
         click.echo(json.dumps(entry))
 
 

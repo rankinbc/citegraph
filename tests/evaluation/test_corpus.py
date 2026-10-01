@@ -1,10 +1,35 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from citegraph.evaluation.corpus import CorpusRepo, fetch_corpus, load_corpus
+import pytest
+
+import citegraph.evaluation.corpus as corpus_mod
+from citegraph.evaluation.corpus import CorpusError, CorpusRepo, fetch_corpus, load_corpus
 from tests.helpers import commit_all, git, write_files
 
 MakeRepo = Callable[[str, dict[str, str]], Path]
+
+GIT_FAILURES = [
+    (FileNotFoundError(2, "No such file or directory", "git"), "could not run git"),
+    (UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte"), "could not be decoded"),
+]
+
+
+@pytest.mark.parametrize(("error", "message"), GIT_FAILURES, ids=["git-missing", "undecodable"])
+@pytest.mark.parametrize("cloned", [False, True], ids=["fresh", "already-cloned"])
+def test_git_failures_become_corpus_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: Exception, message: str, cloned: bool
+) -> None:
+    if cloned:  # the first git call is then `cat-file`, not `clone`
+        (tmp_path / "r" / ".git").mkdir(parents=True)
+
+    def fail(*_args: object, **_kwargs: object) -> None:
+        raise error
+
+    monkeypatch.setattr(corpus_mod.subprocess, "run", fail)
+    repos = [CorpusRepo(name="r", url="https://example.invalid/r.git", sha="0" * 40, lang="python")]
+    with pytest.raises(CorpusError, match=message):
+        fetch_corpus(repos, tmp_path)
 
 
 def test_fetch_pins_exact_sha(make_repo: MakeRepo, tmp_path: Path) -> None:

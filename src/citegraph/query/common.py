@@ -187,10 +187,18 @@ class QueryContext:
             for r in self.rows("SELECT name, path, head_sha, indexed_at FROM repos ORDER BY name")
             if r["name"] in repos
         ]
-        stale = any(self.current_head(r["path"]) != r["head_sha"] for r in repo_rows)
+        heads = {r["name"]: self.current_head(r["path"]) for r in repo_rows}
+        unreadable = [r["name"] for r in repo_rows if heads[r["name"]] is None]
+        behind = [r["name"] for r in repo_rows if heads[r["name"]] not in (None, r["head_sha"])]
+        stale = bool(unreadable or behind)
         all_notes = list(notes or [])
-        if stale:
+        if behind:
             all_notes.append("index is behind HEAD for at least one repo; run `citegraph index <root>`")
+        if unreadable:
+            all_notes.append(
+                f"HEAD could not be read for {', '.join(unreadable)} (git is missing or the repo path is gone), "
+                "so freshness is unknown and the answer is marked stale"
+            )
         source_list = list(sources)
         return Answer(
             data=data,

@@ -47,7 +47,7 @@ def test_connection_is_read_only(db: Path, tmp_path: Path) -> None:
 
 def test_run_returns_answer_and_audits(db: Path, tmp_path: Path) -> None:
     runner = runner_for(db, tmp_path)
-    payload = runner.run("what_calls", {"symbol": "charge"}, lambda q: what_calls(q, "charge"), client="test")
+    payload = runner.run("what_calls", {"symbol": "charge"}, what_calls, client="test")
     assert payload["source"] == "derived"
     audit_text = next((tmp_path / "audit").iterdir()).read_text(encoding="utf-8")
     assert '"tool": "what_calls"' in audit_text
@@ -57,8 +57,8 @@ def test_run_returns_answer_and_audits(db: Path, tmp_path: Path) -> None:
 def test_egress_is_sanitized(db: Path, tmp_path: Path) -> None:
     runner = runner_for(db, tmp_path)
 
-    def leaky(_ctx: QueryContext) -> Answer[list[str]]:
-        return Answer(data=[SECRET], notes=[SECRET])
+    def leaky(_ctx: QueryContext, x: str) -> Answer[list[str]]:
+        return Answer(data=[x], notes=[x])
 
     payload = runner.run("status", {"x": SECRET}, leaky, client="test")
     assert SECRET not in repr(payload)
@@ -71,8 +71,8 @@ def test_error_shapes(db: Path, tmp_path: Path) -> None:
     def boom(_ctx: QueryContext) -> Answer[None]:
         raise RuntimeError("secret internals")
 
-    def bad_args(_ctx: QueryContext) -> Answer[None]:
-        raise TypeError("what_calls() got an unexpected keyword argument 'x'")
+    def broken(_ctx: QueryContext) -> Answer[None]:
+        raise TypeError("unsupported operand type(s) for +: 'int' and 'str'")
 
     def ambiguous(_ctx: QueryContext) -> Answer[None]:
         raise ToolError("ambiguous_symbol", "2 symbols match", data=[{"qualified_name": "a.x"}])
@@ -80,7 +80,11 @@ def test_error_shapes(db: Path, tmp_path: Path) -> None:
     internal = runner.run("status", {}, boom, client="t")
     assert internal["error"] == "internal"
     assert "secret internals" not in repr(internal)
-    assert runner.run("status", {}, bad_args, client="t")["error"] == "invalid_argument"
+    bad = runner.run("what_calls", {"symbol": "charge", "bogus": 1}, what_calls, client="t")
+    assert bad["error"] == "invalid_argument"
+    assert "bogus" in str(bad["message"])
+    assert runner.run("what_calls", {}, what_calls, client="t")["error"] == "invalid_argument"
+    assert runner.run("status", {}, broken, client="t")["error"] == "internal"  # a TypeError inside the tool
     amb = runner.run("status", {}, ambiguous, client="t")
     assert amb == {
         "error": "ambiguous_symbol",
@@ -107,7 +111,7 @@ def test_reads_work_during_reindex(make_repo: MakeRepo, repos_root: Path, tmp_pa
     write_files(billing, {"src/billing/extra.py": "def extra():\n    pass\n"})
     commit_all(billing, "add extra")
     index_root(repos_root)
-    payload = runner.run("what_calls", {"symbol": "charge"}, lambda q: what_calls(q, "charge"), client="t")
+    payload = runner.run("what_calls", {"symbol": "charge"}, what_calls, client="t")
     assert "error" not in payload
 
 

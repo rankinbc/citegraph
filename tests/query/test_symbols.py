@@ -111,3 +111,11 @@ def test_stale_flag_and_note(sample_store: Store) -> None:
     answer = search_symbols(ctx, "charge")
     assert answer.stale is True
     assert any("citegraph index" in n for n in answer.notes)
+
+
+def test_unreadable_head_is_not_reported_as_behind(sample_store: Store) -> None:
+    ctx = QueryContext(sample_store, head_fn=lambda _p: None)  # git missing, or the repo path is gone
+    answer = search_symbols(ctx, "charge")
+    assert answer.stale is True
+    assert any("HEAD could not be read" in n for n in answer.notes)
+    assert not any("behind HEAD" in n for n in answer.notes)

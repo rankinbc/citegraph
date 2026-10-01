@@ -3,11 +3,29 @@ from pathlib import Path
 
 import pytest
 
+import citegraph.ingest as ingest_mod
 from citegraph.config import CitegraphConfig, load_config
-from citegraph.ingest import IngestError, discover_repos, language_for, scan_repo
+from citegraph.ingest import IngestError, discover_repos, head_sha, language_for, scan_repo
 from tests.helpers import git
 
 MakeRepo = Callable[[str, dict[str, str]], Path]
+
+GIT_FAILURES = [
+    (FileNotFoundError(2, "No such file or directory", "git"), "could not run git"),
+    (UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte"), "not valid UTF-8"),
+]
+
+
+@pytest.mark.parametrize(("error", "message"), GIT_FAILURES, ids=["git-missing", "undecodable"])
+def test_git_failures_become_ingest_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: Exception, message: str
+) -> None:
+    def fail(*_args: object, **_kwargs: object) -> None:
+        raise error
+
+    monkeypatch.setattr(ingest_mod.subprocess, "run", fail)
+    with pytest.raises(IngestError, match=message):
+        head_sha(tmp_path)
 
 
 def test_discovers_child_repos_sorted(make_repo: MakeRepo, repos_root: Path) -> None:

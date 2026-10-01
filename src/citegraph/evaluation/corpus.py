@@ -10,6 +10,10 @@ import yaml
 from pydantic import BaseModel
 
 
+class CorpusError(Exception):
+    """git could not be run, or its output could not be decoded."""
+
+
 class CorpusRepo(BaseModel):
     name: str
     url: str
@@ -23,8 +27,17 @@ def load_corpus(path: Path) -> list[CorpusRepo]:
     return [CorpusRepo.model_validate(r) for r in repos]
 
 
+def _run_git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(["git", *args], check=check, capture_output=True, text=True)
+    except OSError as exc:
+        raise CorpusError(f"could not run git ({exc}); install git and make sure it is on PATH") from exc
+    except UnicodeDecodeError as exc:
+        raise CorpusError("git output could not be decoded as text") from exc
+
+
 def _git(*args: str) -> str:
-    return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout.strip()
+    return _run_git(*args).stdout.strip()
 
 
 def fetch_corpus(repos: list[CorpusRepo], dest: Path) -> list[Path]:
@@ -34,14 +47,9 @@ def fetch_corpus(repos: list[CorpusRepo], dest: Path) -> list[Path]:
         path = dest / repo.name
         if not (path / ".git").exists():
             _git("clone", "--quiet", "--no-checkout", repo.url, str(path))
-        # no check=True: a missing commit (not yet fetched, or an interrupted clone) exits non-zero
+        # no check: a missing commit (not yet fetched, or an interrupted clone) exits non-zero
         have_sha = (
-            subprocess.run(
-                ["git", "-C", str(path), "cat-file", "-e", f"{repo.sha}^{{commit}}"],
-                capture_output=True,
-                text=True,
-            ).returncode
-            == 0
+            _run_git("-C", str(path), "cat-file", "-e", f"{repo.sha}^{{commit}}", check=False).returncode == 0
         )
         if not have_sha:
             _git("-C", str(path), "fetch", "--quiet", "origin")
