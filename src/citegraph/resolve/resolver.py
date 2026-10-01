@@ -6,6 +6,7 @@ from collections import Counter
 
 from citegraph.resolve.csharp import CSharpResolver
 from citegraph.resolve.graph import Graph, RefRow, Resolution, Sym, by_name, load_graph, lookup
+from citegraph.resolve.queues import QUEUE_KINDS, QueueResolver, load_queue_index
 from citegraph.resolve.rules import CONFIDENCE
 from citegraph.store import EdgeRow, Store
 
@@ -74,6 +75,7 @@ def _resolve_python(graph: Graph, ref: RefRow, source: Sym) -> Resolution | None
 def resolve_all(store: Store) -> dict[str, int]:
     graph = load_graph(store)
     csharp = CSharpResolver(graph)
+    queues = QueueResolver(graph, load_queue_index(store, graph), csharp, _resolve_call)
     stats: Counter[str] = Counter()
     rows: list[EdgeRow] = []
     refs = [
@@ -99,8 +101,11 @@ def resolve_all(store: Store) -> dict[str, int]:
             continue
         from_id = source.id
         if graph.file_lang[ref.file_id] == "csharp":
-            resolution = csharp.resolve(ref, source)
             from_id = csharp.canonical(source).id
+        if ref.kind in QUEUE_KINDS:
+            resolution = queues.resolve(ref, source)
+        elif graph.file_lang[ref.file_id] == "csharp":
+            resolution = csharp.resolve(ref, source)
         else:
             resolution = _resolve_python(graph, ref, source)
         if resolution is None:
@@ -108,7 +113,10 @@ def resolve_all(store: Store) -> dict[str, int]:
             continue
         stats[resolution.rule] += 1
         for target in resolution.targets:
-            kind = "instantiate" if ref.kind == "call" and target.kind == "class" else ref.kind
+            if ref.kind in QUEUE_KINDS:
+                kind = "call"
+            else:
+                kind = "instantiate" if ref.kind == "call" and target.kind == "class" else ref.kind
             rows.append(
                 EdgeRow(
                     ref.id,

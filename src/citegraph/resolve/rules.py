@@ -8,7 +8,7 @@ import json
 
 # Bump when resolver logic changes, so existing indexes re-resolve on the next run. The confidence table,
 # the candidate cap and the stoplist are part of resolver_fingerprint already.
-RESOLVER_VERSION = "2"
+RESOLVER_VERSION = "3"
 
 CONFIDENCE: dict[str, float] = {
     "direct": 1.0,
@@ -16,6 +16,7 @@ CONFIDENCE: dict[str, float] = {
     "import_scope": 0.9,
     "same_namespace": 0.9,
     "declared_type": 0.85,
+    "queue_match": 0.9,
     "repo_unique": 0.7,
     "cross_repo_unique": 0.6,
     "ambiguous": 0.15,
@@ -26,6 +27,7 @@ RULE_MEANING: dict[str, str] = {
     "same_file": "the name is defined in the same file as the reference",
     "import_scope": "the name was resolved through an import in the referencing file",
     "same_namespace": "the type is declared in the referencing file's namespace or a parent namespace",
+    "queue_match": "a job sent to a queue by name, matched to the worker function registered under that name",
     "declared_type": "the call is on a variable, field or parameter whose declared type has this member",
     "repo_unique": "only one symbol with this name exists in the repo",
     "cross_repo_unique": "only one symbol with this name exists across all indexed repos",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Mapping
 
 from citegraph.resolve.graph import CsImports, Graph, RefRow, Resolution, Sym, by_name, lookup
 
@@ -82,6 +83,20 @@ class CSharpResolver:
             lookup(self.graph, source.qualified_name, source.repo_id, LANG, frozenset({source.kind}))
             or source
         )
+
+    def constant_value(self, ref: RefRow, source: Sym, constants: Mapping[str, str]) -> str | None:
+        """The value of the constant a reference names (`Tasks.Classify`), its type resolved by the C# rules."""
+        type_name, _, member = ref.to_name.rpartition(".")
+        if not type_name:
+            return None
+        types = self.resolve_type(
+            type_name, ref.file_id, self._enclosing_type(source), self._namespace(source)
+        )
+        for target in types.targets if types is not None else []:
+            value = constants.get(f"{target.qualified_name}.{member}")
+            if value is not None:
+                return value
+        return None
 
     def find_member(self, type_q: str, member: str, repo_id: int) -> Sym | None:
         """`member` declared on the type, or on a base type or interface up to MAX_BASE_HOPS levels up."""
