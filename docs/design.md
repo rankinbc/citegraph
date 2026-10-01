@@ -201,6 +201,8 @@ class Answer(BaseModel, Generic[T]):
 | `direct` - symbol exists as parsed | 1.0 |
 | `same_file` | 0.95 |
 | `import_scope` - resolved through an import or `using` | 0.9 |
+| `same_namespace` - C#: the type is in the referencing namespace or a parent namespace | 0.9 (initial; C# eval pending) |
+| `declared_type` - C#: the receiver's declared type, or a base type up to 3 hops, has the member | 0.85 (initial; C# eval pending) |
 | `repo_unique` - only one symbol with that name in the repo | 0.7 |
 | `cross_repo_unique` - only one symbol with that name across all repos | 0.6 |
 | `ambiguous` - n candidates | 0.15, calibrated on the Level-1 eval (was 0.5; `eval/reports/2026-09-28/analysis.md`, section 14 item 10); all candidates listed in `notes` |
@@ -215,7 +217,7 @@ Language import handling in v1:
   `__init__.py`.
 - TypeScript: relative module paths, `index` resolution, workspace package names mapped to repos via
   `package.json`; `tsconfig` path aliases are out of scope for v1.
-- C#: `using` namespaces mapped to declared namespaces.
+- C#: see [the C# design spec](specs/2026-10-01-csharp-design.md) and section 14, items 29-33.
 
 ### Staleness
 
@@ -533,3 +535,25 @@ The agent-guardrails companion is built between M1 and M2.
     hash or a lower-case macOS temporary folder never does, even beside a `T` segment); otherwise each segment is
     judged alone, as is each delimiter. On 2000 random values, each of the three shapes is fully redacted 98.2% of
     the time or more (0% before). The path-word pattern is part of the content fingerprint. (Amends item 25.)
+
+### C# support, core (2026-10-01)
+
+Implements [docs/specs/2026-10-01-csharp-design.md](specs/2026-10-01-csharp-design.md) sections 3-5; the C# eval
+(section 6) is a separate plan.
+
+29. **C# extraction.** tree-sitter-c-sharp; `.cs` files are indexed by default (`languages = ["python", "csharp"]`).
+    References carry the declared type of their receiver when it is a local, parameter, field, property or
+    primary-constructor parameter (`refs.receiver_type`, schema version 2). `files.module` holds the file's first
+    namespace. Global usings are stored as `*global`, `*global-static` and `*global=<alias>`. Section reads compose
+    (`GetSection("A").GetValue("B")` records `A:B`).
+30. **Schema 2 upgrade path.** `Store.open` adds `refs.receiver_type` to an older index, and the content fingerprint
+    includes the schema version, so the first run after upgrading re-extracts every file.
+31. **Language isolation.** Name fallback and qualified lookups only link symbols of the reference's language, so
+    Python results are identical with C# repos in the same corpus (verified against the committed Python eval).
+32. **C# rules.** In order: `this.`/`base.` members (with base types); declared receiver types (`declared_type`,
+    up to 3 base hops; a known type without the member is not guessed); enclosing-type members and `using static`;
+    type names through aliases, enclosing types, the namespace and its parents (`same_namespace`) and usings; then
+    the name rules with the C# stoplist. Every C# inherit reference is resolved before any other reference.
+33. **Kind-aware C# lookups.** A C# call only matches methods and `new`/base lists only match types, in name
+    fallback and in qualified lookups. On a 32k-line ASP.NET Core solution this cut ambiguous edges from 254 to 48.
+    A file outside any namespace names its module symbol after the file stem, so type lookups skip module symbols.

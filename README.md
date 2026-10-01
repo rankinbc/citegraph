@@ -7,7 +7,7 @@
 **Ask your AI coding assistant "what calls this function?" and get the exact answer, with file and line numbers it
 can prove.**
 
-citegraph turns your Python repositories into a searchable call graph and hands it to Claude Code (or any assistant
+citegraph turns your Python and C# repositories into a searchable call graph and hands it to Claude Code (or any assistant
 that speaks [MCP](https://modelcontextprotocol.io)) as a set of tools. Instead of grepping and reading file after file,
 the assistant asks citegraph and gets back the precise callers, callees, call paths and config usages, each with its
 `path:line`, the git commit, and a confidence score measured against a labeled benchmark.
@@ -16,7 +16,7 @@ the assistant asks citegraph and gets back the precise callers, callees, call pa
 |---|---|
 | **What it is** | A command-line tool that also runs as a local MCP server. Written in Python 3.13. Not a hosted service, and not a Claude Code plugin: any MCP-compatible assistant can use it. |
 | **What it does** | Reads your repos once, records which functions call which and where each config setting is defined and read, and answers questions about that map in milliseconds. |
-| **Who it is for** | Developers who use Claude Code, Claude Desktop or Cursor on Python codebases, especially ones spread across several repositories. |
+| **Who it is for** | Developers who use Claude Code, Claude Desktop or Cursor on Python or C# codebases, especially ones spread across several repositories. |
 | **Why it is different** | Every answer cites its evidence and says how sure it is. It never returns source code or secrets. Its accuracy is measured against grep, and that check runs in CI. |
 
 ### How a question flows
@@ -38,7 +38,7 @@ sequenceDiagram
 
 ## What it does
 
-1. **It reads your code.** Point it at a folder of git repositories. It parses every git-tracked Python file and records
+1. **It reads your code.** Point it at a folder of git repositories. It parses every git-tracked Python and C# file and records
    each function, class and method, which functions call which, what each file imports, and which configuration
    settings (environment variables, keys in JSON/YAML config files) are defined or read where. It stores names and
    locations only, never the code itself or any config values.
@@ -328,7 +328,7 @@ flowchart LR
 ```
 
 1. **Ingest** lists tracked files with git and skips anything unchanged since the last run (content hash).
-2. **Extract** parses Python with tree-sitter in a process pool: symbols, call/import/inheritance references, and
+2. **Extract** parses Python and C# with tree-sitter in a process pool: symbols, call/import/inheritance references, and
    config key *names* from env reads, JSON, YAML, docker-compose and `.env` example files.
 3. **Store** writes everything to SQLite through a single method that sanitizes every string first.
 4. **Resolve** turns references into edges in a whole-graph pass. Each edge records the rule that produced it
@@ -378,7 +378,14 @@ permission rules. See [the design](docs/design.md), section 7. The leak scanner 
 
 ## Limitations
 
-- **Python only in v0.1.** TypeScript and C# are next.
+- **Python and C#.** TypeScript is next. C# support is new: its two C# rules (`declared_type` 0.85,
+  `same_namespace` 0.9) start at the values in the [C# design spec](docs/specs/2026-10-01-csharp-design.md) and
+  are not yet calibrated on a labeled C# benchmark; that eval is the next milestone.
+- **C# specifics.** A call on a variable, parameter, field or property with a declared type resolves through that
+  type and up to three levels of base types and interfaces. There is no generic type inference (`var x = Make<T>()`
+  has no known type), extension methods resolve by name only, and calls made through reflection or dependency
+  injection registrations are invisible. A receiver whose type is not in the index (a framework type) falls back
+  to name matching.
 - **Heuristic resolution.** Dynamic dispatch, monkey-patching and calls through variables are invisible or matched by
   name, with lower confidence.
 - **No receiver-type inference.** A method called on a local, a parameter or an attribute chain (`client.request`,
@@ -404,7 +411,8 @@ permission rules. See [the design](docs/design.md), section 7. The leak scanner 
 
 ## Roadmap
 
-- TypeScript and C# extractors.
+- A C# eval: scip-dotnet labels, a C# golden set and grep baseline, calibrated C# confidence and a CI gate.
+- A TypeScript extractor.
 - Curated cross-service edges (for example, an HTTP call from one service to another's handler).
 - Package-root detection for monorepos and re-export following.
 - An agent-level eval: does an agent answer better and cheaper with citegraph than with grep alone?
