@@ -123,7 +123,7 @@ repository's own logical repo.
 **Job queues.** citegraph links a job sent to a Dramatiq queue to the function that runs it, across languages:
 
 - Sends: C# calls named `Enqueue`/`EnqueueAsync` (configurable) whose first argument is a string literal or a
-  constant (`DramatiqTasks.ClassifyStems`); Python `actor.send(...)`, `actor.send_with_options(...)` and
+  dotted constant such as `DramatiqTasks.ClassifyStems` (a bare identifier is skipped); Python `actor.send(...)`, `actor.send_with_options(...)` and
   `broker.enqueue(Message(actor_name="..."))`.
 - Handlers: functions decorated with `@dramatiq.actor(...)`, under their `actor_name` or their own name.
 - The link is an edge with rule `queue_match` (confidence 0.9); two handlers with one name give `ambiguous` edges.
@@ -141,7 +141,7 @@ repository:
 
 Names are qualified names, optionally `repo:qualified.name`. Each entry is an edge with rule `curated` (confidence
 1.0) whose evidence is its line in the file; `explain_edge` shows the note. `status` lists entries whose names match
-no symbol or more than one (`overrides_unresolved`).
+no symbol or more than one (`overrides_unresolved`). A malformed file (bad YAML, missing or non-list `edges`, an entry missing `from`/`to`, or a `kind` other than `call`) is a parse error for the whole file and adds no links; it shows in `status` parse errors, while well-formed entries whose names match nothing show in `overrides_unresolved`.
 
 ## Tools and the answer format
 

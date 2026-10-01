@@ -577,8 +577,7 @@ Implements [docs/specs/2026-10-01-cross-service-links-design.md](specs/2026-10-0
 36. **Projects.** Opt-in with `projects = "auto"` or a list of folders in `citegraph.toml`. Auto detection: a folder
     with `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt` or a `.sln`, or a `.csproj` folder with no
     `.sln` above it; the repository root is never a project. Each project is a logical repo named `<repo>/<folder>`,
-    and module names and evidence paths are relative to the folder. A scan that fails for a project leaves that
-    project's previous index in place rather than dropping it.
+    and module names and evidence paths are relative to the folder. If scanning a repository fails (for example a git error), that repository and its projects keep their previous index instead of being dropped.
 37. **Queue facts.** Sends are stored as refs of kind `queue` (literal name), `queue_const` (constant) and
     `queue_actor` (Python actor send); handlers go in table `queue_handlers`; name-shaped C# `const string` values go
     in `string_consts`. The schema version is 3, and `[queues] send_methods` is part of the content fingerprint, so
@@ -586,7 +585,7 @@ Implements [docs/specs/2026-10-01-cross-service-links-design.md](specs/2026-10-0
 38. **`queue_match` resolution.** A `queue_const` is resolved to its value through the C# type rules, then matched to
     handlers by name in any language. A Python `.send` first resolves its receiver through the Python rules to the
     actor, then links to that handler. Two handlers with one name give `ambiguous` edges.
-39. **Curated links.** Entries in `citegraph.overrides.yaml` become `refs` with rule `curated`, confidence 1.0, and
+39. **Curated links.** Entries in `citegraph.overrides.yaml` become refs of kind `curated`, which resolve to edges with rule `curated`, confidence 1.0, and
     the entry's `note` in `refs.note`. Names must match a qualified name exactly, optionally prefixed `repo:`. Entries
     whose names match nothing or more than one are listed by `status` as `overrides_unresolved`. The evidence source
     is the line in the overrides file.
