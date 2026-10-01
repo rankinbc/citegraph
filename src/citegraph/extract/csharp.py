@@ -175,18 +175,22 @@ class _Visitor:
     # --- scopes -----------------------------------------------------------------------------------------
 
     def _declare(self, name: str, type_node: Node | None) -> None:
-        declared = _type_name(type_node)
-        if name and declared:
-            self.frames[-1][name] = declared
+        """Record a name in the innermost scope. Without a usable type it is recorded as "" (unknown), so it still
+        shadows an outer declaration of the same name."""
+        if name:
+            self.frames[-1][name] = _type_name(type_node) or ""
 
     def _declared(self, name: str) -> str | None:
         for frame in reversed(self.frames):
             if name in frame:
-                return frame[name]
+                return frame[name] or None
         return None
 
     def _declare_params(self, params: Node | None) -> None:
         if params is None:
+            return
+        if params.type in ("identifier", "implicit_parameter"):  # x => ...
+            self._declare(_text(params), None)
             return
         for param in params.named_children:
             if param.type == "parameter":
@@ -230,6 +234,9 @@ class _Visitor:
             self._variables(node, namespace, owner, type_q)
         elif kind in ("declaration_expression", "declaration_pattern"):
             self._declare(_text(node.child_by_field_name("name")), node.child_by_field_name("type"))
+        elif kind == "foreach_statement":
+            self._declare(_text(node.child_by_field_name("left")), node.child_by_field_name("type"))
+            self._walk(node, namespace, owner, type_q)
         elif kind == "invocation_expression":
             self._invocation(node, owner)
             self._walk(node, namespace, owner, type_q)
@@ -332,10 +339,10 @@ class _Visitor:
                 continue
             name_node = declarator.child_by_field_name("name")
             value = next((c for c in declarator.named_children if c != name_node), None)
-            if declared is not None:
+            if declared is None and value is not None and value.type == "object_creation_expression":
+                self._declare(_text(name_node), value.child_by_field_name("type"))  # var x = new T()
+            else:
                 self._declare(_text(name_node), type_node)
-            elif value is not None and value.type == "object_creation_expression":  # var x = new T()
-                self._declare(_text(name_node), value.child_by_field_name("type"))
             if value is None:
                 continue
             if value.type == "implicit_object_creation_expression" and declared is not None:  # T x = new()

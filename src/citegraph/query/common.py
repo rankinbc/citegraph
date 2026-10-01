@@ -98,6 +98,15 @@ def _candidate(row: sqlite3.Row) -> dict[str, object]:
     }
 
 
+def _one_symbol(rows: list[sqlite3.Row]) -> sqlite3.Row | None:
+    """The first row when the rows name one symbol: C# overloads and partial declarations share a qualified name
+    and repo, and a file outside any namespace has a module symbol named like its type, which yields to it."""
+    named = [r for r in rows if r["kind"] != "module"] or rows
+    if not named or len({(r["repo"], r["qualified_name"], r["kind"]) for r in named}) != 1:
+        return None
+    return named[0]
+
+
 class QueryContext:
     def __init__(self, store: Store, head_fn: HeadFn = git_head, stale_ttl_s: float = 60.0) -> None:
         self.store = store
@@ -130,19 +139,20 @@ class QueryContext:
         repo_clause = " AND r.name = ?" if repo else ""
         repo_params: tuple[object, ...] = (repo,) if repo else ()
         exact = self.rows(
-            SYMBOL_SELECT + " WHERE s.qualified_name = ?" + repo_clause, (cleaned, *repo_params)
+            SYMBOL_SELECT + " WHERE s.qualified_name = ?" + repo_clause + " ORDER BY s.id",
+            (cleaned, *repo_params),
         )
-        if len(exact) == 1:
-            return exact[0]
+        if (one := _one_symbol(exact)) is not None:
+            return one
         candidates = exact or self.rows(
             SYMBOL_SELECT
             + " WHERE (s.name = ? OR s.qualified_name LIKE ? ESCAPE '\\') AND s.kind != 'module'"
             + repo_clause
-            + " ORDER BY s.qualified_name LIMIT 51",
+            + " ORDER BY s.qualified_name, s.id LIMIT 51",
             (cleaned, "%." + like_escape(cleaned), *repo_params),
         )
-        if len(candidates) == 1:
-            return candidates[0]
+        if (one := _one_symbol(candidates)) is not None:
+            return one
         if candidates:
             message = (
                 f"more than 50 symbols match {name!r}"
@@ -162,6 +172,17 @@ class QueryContext:
                 _candidate(r) for r in self.rows(SYMBOL_SELECT + " WHERE s.name = ? LIMIT 5", (suggestion,))
             )
         raise ToolError("not_found", f"no symbol matches {name!r}", hint="try search_symbols", data=data)
+
+    def symbol_ids(self, row: sqlite3.Row) -> list[int]:
+        """Every declaration of the symbol `resolve_symbol` returned: same repo, qualified name and kind."""
+        return [
+            int(r["id"])
+            for r in self.rows(
+                "SELECT s.id FROM symbols s JOIN files f ON f.id = s.file_id JOIN repos r ON r.id = f.repo_id "
+                "WHERE s.qualified_name = ? AND s.kind = ? AND r.name = ? ORDER BY s.id",
+                (row["qualified_name"], row["kind"], row["repo"]),
+            )
+        ]
 
     def current_head(self, repo_path: str) -> str | None:
         now = time.monotonic()

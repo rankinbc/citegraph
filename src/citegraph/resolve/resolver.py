@@ -68,8 +68,10 @@ def resolve_all(store: Store) -> dict[str, int]:
         if source is None:
             stats["unresolved"] += 1
             continue
+        from_id = source.id
         if graph.file_lang[ref.file_id] == "csharp":
             resolution = csharp.resolve(ref, source)
+            from_id = csharp.canonical(source).id
         else:
             resolution = _resolve_python(graph, ref, source)
         if resolution is None:
@@ -81,7 +83,7 @@ def resolve_all(store: Store) -> dict[str, int]:
             rows.append(
                 EdgeRow(
                     ref.id,
-                    source.id,
+                    from_id,
                     target.id,
                     kind,
                     resolution.rule,

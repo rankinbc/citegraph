@@ -73,7 +73,7 @@ def load_graph(store: Store) -> Graph:
         graph.file_module[int(row["id"])] = str(row["module"] or "")
     sql = (
         "SELECT s.id, s.file_id, f.repo_id, f.lang, s.kind, s.name, s.qualified_name "
-        "FROM symbols s JOIN files f ON f.id = s.file_id"
+        "FROM symbols s JOIN files f ON f.id = s.file_id ORDER BY s.id"
     )
     for row in store.conn.execute(sql):
         sym = Sym(

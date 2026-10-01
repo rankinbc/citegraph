@@ -83,8 +83,9 @@ def test_base_type_walk_stops_after_three_hops(tmp_path: Path) -> None:
         ),
         "Use.cs": "namespace N;\nclass U { void A(L3 x) { x.Ping(); } void B(L4 y) { y.Ping(); } }\n",
     }
-    calls = {(f, t) for f, t, kind, _ in edges(tmp_path, files) if kind == "call"}
-    assert calls == {("N.U.A", "N.L0.Ping")}
+    calls = {(f, t, rule) for f, t, kind, rule in edges(tmp_path, files) if kind == "call"}
+    # four hops is past the declared-type walk, so B's call is only matched by name
+    assert calls == {("N.U.A", "N.L0.Ping", "declared_type"), ("N.U.B", "N.L0.Ping", "repo_unique")}
 
 
 def test_circular_inheritance_terminates(tmp_path: Path) -> None:
@@ -92,13 +93,14 @@ def test_circular_inheritance_terminates(tmp_path: Path) -> None:
     assert {kind for _, _, kind, _ in edges(tmp_path, files)} == {"inherit"}
 
 
-def test_known_receiver_type_without_the_member_is_not_guessed(tmp_path: Path) -> None:
+def test_member_missing_from_a_known_type_falls_back_to_name_rules(tmp_path: Path) -> None:
+    # an extension method is not declared on the receiver's type; step 2 finds nothing, so step 5 applies
     files = {
-        "Repo.cs": "namespace N;\nclass Repo { }\n",
-        "Other.cs": "namespace N;\nclass Other { public void Persist() { } }\n",
-        "Use.cs": "namespace N;\nclass U { void M(Repo r) { r.Persist(); } }\n",
+        "Order.cs": "namespace N;\nclass Order { }\n",
+        "Ext.cs": "namespace N;\nstatic class OrderExtensions { public static int ToDto(this Order o) => 1; }\n",
+        "Use.cs": "namespace N;\nclass U { void M(Order order) { order.ToDto(); } }\n",
     }
-    assert edges(tmp_path, files) == set()
+    assert edges(tmp_path, files) == {("N.U.M", "N.OrderExtensions.ToDto", "call", "repo_unique")}
 
 
 def test_unknown_receiver_type_falls_back_to_name_rules(tmp_path: Path) -> None:

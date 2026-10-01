@@ -311,3 +311,32 @@ def test_bom_and_crlf_keep_line_numbers() -> None:
         ]
         assert refs(result) == [("A.K.M", "Foo", None, 7)]
         assert not result.parse_error
+
+
+def test_an_untyped_declaration_shadows_a_typed_one() -> None:
+    src = textwrap.dedent(
+        """\
+        class C
+        {
+            private IFoo _svc;
+            private Item x;
+            private Order order;
+            void M()
+            {
+                var _svc = Make();
+                _svc.Bar();
+                foreach (var x in xs) x.Go();
+                F(order => order.Total());
+            }
+            void N() { foreach (Item it in xs) it.Go(); }
+        }
+        """
+    )
+    assert [(to, receiver) for _, to, receiver, _ in refs(extract(src, "C.cs"))] == [
+        ("Make", None),
+        ("_svc.Bar", None),
+        ("x.Go", None),
+        ("F", None),
+        ("order.Total", None),
+        ("Go", "Item"),
+    ]

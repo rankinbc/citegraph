@@ -92,14 +92,16 @@ def _neighbors(
 
 
 def _hidden_edges(
-    ctx: QueryContext, symbol_id: int, direction: Literal["in", "out"], min_confidence: float
+    ctx: QueryContext, symbol_ids: list[int], direction: Literal["in", "out"], min_confidence: float
 ) -> list[sqlite3.Row]:
     """The symbol's own (level-1) call edges below min_confidence."""
     column = "to_symbol_id" if direction == "in" else "from_symbol_id"
+    id_marks = ",".join("?" * len(symbol_ids))
     kind_marks = ",".join("?" * len(CALL_KINDS))
     return ctx.rows(
-        f"SELECT rule, confidence FROM edges WHERE {column} = ? AND confidence < ? AND kind IN ({kind_marks})",
-        (symbol_id, min_confidence, *CALL_KINDS),
+        f"SELECT rule, confidence FROM edges WHERE {column} IN ({id_marks}) AND confidence < ? "
+        f"AND kind IN ({kind_marks})",
+        (*symbol_ids, min_confidence, *CALL_KINDS),
     )
 
 
@@ -146,9 +148,10 @@ def _traverse(
     check_float("min_confidence", min_confidence, 0.0, 1.0)
     check_int("limit", limit, 1, MAX_LIMIT)
     target = ctx.resolve_symbol(symbol)
+    target_ids = ctx.symbol_ids(target)
     other_column = "from_symbol_id" if direction == "in" else "to_symbol_id"
-    seen = {int(target["id"])}
-    frontier = [int(target["id"])]
+    seen = set(target_ids)
+    frontier = list(target_ids)
     items: list[EdgeInfo] = []
     evidence: list[Evidence] = []
     notes: list[str] = []
@@ -179,7 +182,7 @@ def _traverse(
     if not items:
         what = "callers" if direction == "in" else "callees"
         notes.append(f"no {what} at min_confidence >= {min_confidence}")
-    hidden = _hidden_edges(ctx, int(target["id"]), direction, min_confidence)
+    hidden = _hidden_edges(ctx, target_ids, direction, min_confidence)
     if hidden:
         notes.append(_hidden_note(hidden))
     return ctx.answer(
@@ -212,11 +215,11 @@ def find_path(
     check_int("max_depth", max_depth, 1, 10)
     check_float("min_confidence", min_confidence, 0.0, 1.0)
     start, goal = ctx.resolve_symbol(from_symbol), ctx.resolve_symbol(to_symbol)
-    start_id, goal_id = int(start["id"]), int(goal["id"])
-    parent: dict[int, tuple[int, sqlite3.Row] | None] = {start_id: None}
-    frontier = [start_id]
+    start_ids, goal_ids = ctx.symbol_ids(start), set(ctx.symbol_ids(goal))
+    parent: dict[int, tuple[int, sqlite3.Row] | None] = dict.fromkeys(start_ids)
+    frontier = list(start_ids)
     for _ in range(max_depth):
-        if goal_id in parent or not frontier:
+        if goal_ids & parent.keys() or not frontier:
             break
         next_frontier: list[int] = []
         for row in _neighbors(ctx, frontier, "out", min_confidence):
@@ -226,9 +229,10 @@ def find_path(
                 next_frontier.append(target)
         frontier = next_frontier
     repos = {start["repo"], goal["repo"]}
-    if goal_id not in parent:
+    reached = [g for g in sorted(goal_ids) if g in parent]
+    if not reached:
         notes = [f"no call path within {max_depth} hops at min_confidence >= {min_confidence}"]
-        hidden = _hidden_edges(ctx, start_id, "out", min_confidence)
+        hidden = _hidden_edges(ctx, start_ids, "out", min_confidence)
         if hidden:
             notes.append(_hidden_note(hidden))
         return ctx.answer(
@@ -240,13 +244,13 @@ def find_path(
             notes=notes,
         )
     chain: list[tuple[int, sqlite3.Row]] = []
-    node = goal_id
+    node = reached[0]
     while (link := parent[node]) is not None:
         chain.append((node, link[1]))
         node = link[0]
     chain.reverse()
-    symbols = _symbols_by_id(ctx, [start_id, *(n for n, _ in chain)])
-    steps = [PathStep(symbol=symbol_info(symbols[start_id]), via=None)]
+    symbols = _symbols_by_id(ctx, [node, *(n for n, _ in chain)])  # node is now the start declaration
+    steps = [PathStep(symbol=symbol_info(symbols[node]), via=None)]
     for depth, (node_id, row) in enumerate(chain, start=1):
         info = symbol_info(symbols[node_id])
         steps.append(PathStep(symbol=info, via=_edge_info(row, info, depth)))
@@ -262,9 +266,12 @@ def find_path(
 
 def explain_edge(ctx: QueryContext, from_symbol: str, to_symbol: str) -> Answer[list[EdgeExplanation]]:
     source, target = ctx.resolve_symbol(from_symbol), ctx.resolve_symbol(to_symbol)
+    source_ids, target_ids = ctx.symbol_ids(source), ctx.symbol_ids(target)
+    source_marks, target_marks = ",".join("?" * len(source_ids)), ",".join("?" * len(target_ids))
     rows = ctx.rows(
-        EDGE_SELECT + " WHERE e.from_symbol_id = ? AND e.to_symbol_id = ? ORDER BY rf.line",
-        (int(source["id"]), int(target["id"])),
+        EDGE_SELECT
+        + f" WHERE e.from_symbol_id IN ({source_marks}) AND e.to_symbol_id IN ({target_marks}) ORDER BY rf.line",
+        (*source_ids, *target_ids),
     )
     explanations = [
         EdgeExplanation(

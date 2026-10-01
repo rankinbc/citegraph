@@ -75,6 +75,14 @@ class CSharpResolver:
             qualified = qualified.rsplit(".", 1)[0]
         return "" if qualified in local and local[qualified].kind != "module" else qualified
 
+    def canonical(self, source: Sym) -> Sym:
+        """The one declaration that edges use for a group sharing a qualified name (overloads, partial types):
+        the same symbol `lookup` returns as a target, so call paths through a group stay connected."""
+        return (
+            lookup(self.graph, source.qualified_name, source.repo_id, LANG, frozenset({source.kind}))
+            or source
+        )
+
     def find_member(self, type_q: str, member: str, repo_id: int) -> Sym | None:
         """`member` declared on the type, or on a base type or interface up to MAX_BASE_HOPS levels up."""
         frontier, seen = [type_q], set[str]()
@@ -153,11 +161,9 @@ class CSharpResolver:
             return types
         if ref.receiver_type:  # step 2: x.Foo() where x has a declared type
             types = self.resolve_type(ref.receiver_type, ref.file_id, enclosing, namespace)
-            if types is None:
+            found = self._member_of(types, ref.to_name, repo_id) if types is not None else None
+            if found is None:  # an unknown type, or a member the type lacks (an extension method): step 5
                 return self._by_name(ref, repo_id, ref.to_name)
-            found = self._member_of(types, ref.to_name, repo_id)
-            if found is None:  # the type is known and lacks the member: no guess by name
-                return None
             return Resolution(found.targets, "declared_type" if len(found.targets) == 1 else "ambiguous")
         parts = ref.to_name.split(".")
         head, rest = parts[0], parts[1:]

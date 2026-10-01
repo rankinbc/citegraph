@@ -217,7 +217,7 @@ Language import handling in v1:
   `__init__.py`.
 - TypeScript: relative module paths, `index` resolution, workspace package names mapped to repos via
   `package.json`; `tsconfig` path aliases are out of scope for v1.
-- C#: see [the C# design spec](specs/2026-10-01-csharp-design.md) and section 14, items 29-33.
+- C#: see [the C# design spec](specs/2026-10-01-csharp-design.md) and section 14, items 29-34.
 
 ### Staleness
 
@@ -551,9 +551,15 @@ Implements [docs/specs/2026-10-01-csharp-design.md](specs/2026-10-01-csharp-desi
 31. **Language isolation.** Name fallback and qualified lookups only link symbols of the reference's language, so
     Python results are identical with C# repos in the same corpus (verified against the committed Python eval).
 32. **C# rules.** In order: `this.`/`base.` members (with base types); declared receiver types (`declared_type`,
-    up to 3 base hops; a known type without the member is not guessed); enclosing-type members and `using static`;
+    up to 3 base hops; a member the type lacks, such as an extension method, falls through to the name rules);
+    enclosing-type members and `using static`;
     type names through aliases, enclosing types, the namespace and its parents (`same_namespace`) and usings; then
     the name rules with the C# stoplist. Every C# inherit reference is resolved before any other reference.
 33. **Kind-aware C# lookups.** A C# call only matches methods and `new`/base lists only match types, in name
     fallback and in qualified lookups. On a 32k-line ASP.NET Core solution this cut ambiguous edges from 254 to 48.
     A file outside any namespace names its module symbol after the file stem, so type lookups skip module symbols.
+34. **Same-named declarations are one symbol.** C# overloads and partial-type declarations share a qualified name.
+    The resolver attaches every C# edge to one canonical declaration per group (the lowest symbol id), and the query
+    tools resolve a name to the whole group, so `what_calls`, `what_does_it_call`, `find_path` and `explain_edge`
+    work on overloaded methods and partial classes; a module symbol yields to a type of the same name. A local or
+    parameter without a known type still shadows an outer declaration of the same name.
