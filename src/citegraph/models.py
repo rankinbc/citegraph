@@ -9,7 +9,8 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 SymbolKind = Literal["module", "class", "interface", "function", "method"]
-RefKind = Literal["call", "import", "inherit", "instantiate"]
+# queue: a job sent by a literal name; queue_const: by a constant (dotted reference); queue_actor: `<actor>.send(...)`
+RefKind = Literal["call", "import", "inherit", "instantiate", "queue", "queue_const", "queue_actor"]
 ConfigOrigin = Literal["json", "yaml", "env-example", "code-read"]
 Source = Literal["parsed", "derived", "curated"]
 ErrorCode = Literal["not_indexed", "ambiguous_symbol", "not_found", "invalid_argument"]
@@ -46,6 +47,23 @@ class ConfigKey(BaseModel):
     reader_qualified: str | None = None
 
 
+class QueueHandler(BaseModel):
+    """A function that handles jobs sent under `name`."""
+
+    protocol: Literal["dramatiq"] = "dramatiq"
+    name: str
+    handler_qualified: str
+    line: int
+
+
+class StringConst(BaseModel):
+    """A constant whose value is shaped like a name; job names behind constants are matched through these."""
+
+    qualified_name: str
+    value: str
+    line: int
+
+
 class EntryPoint(BaseModel):
     kind: Literal["main-block", "console-script", "program-main"]
     name: str
@@ -59,6 +77,8 @@ class ExtractResult(BaseModel):
     imports: list[ImportFact] = Field(default_factory=list[ImportFact])
     config_keys: list[ConfigKey] = Field(default_factory=list[ConfigKey])
     entry_points: list[EntryPoint] = Field(default_factory=list[EntryPoint])
+    queue_handlers: list[QueueHandler] = Field(default_factory=list[QueueHandler])
+    string_consts: list[StringConst] = Field(default_factory=list[StringConst])
     parse_error: bool = False
     module: str | None = None
 

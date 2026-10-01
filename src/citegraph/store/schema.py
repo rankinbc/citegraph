@@ -1,6 +1,6 @@
 """SQLite schema. Names, locations and metadata only: no source text, no config values."""
 
-SCHEMA_VERSION = "2"
+SCHEMA_VERSION = "3"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -33,6 +33,14 @@ CREATE INDEX IF NOT EXISTS ix_config_norm ON config_keys(key_norm);
 CREATE TABLE IF NOT EXISTS entry_points(
   id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
   kind TEXT NOT NULL, name TEXT NOT NULL, target TEXT, line INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS queue_handlers(
+  id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+  protocol TEXT NOT NULL, name TEXT NOT NULL, handler_qualified TEXT NOT NULL, line INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_queue_handlers_name ON queue_handlers(name);
+CREATE TABLE IF NOT EXISTS string_consts(
+  id INTEGER PRIMARY KEY, file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+  qualified_name TEXT NOT NULL, value TEXT NOT NULL, line INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS ix_string_consts_qname ON string_consts(qualified_name);
 CREATE TABLE IF NOT EXISTS edges(
   id INTEGER PRIMARY KEY, ref_id INTEGER NOT NULL REFERENCES refs(id) ON DELETE CASCADE,
   from_symbol_id INTEGER NOT NULL REFERENCES symbols(id) ON DELETE CASCADE,
@@ -68,6 +76,8 @@ TABLES = frozenset(
         "entry_points",
         "edges",
         "overrides",
+        "queue_handlers",
+        "string_consts",
         "index_runs",
     }
 )

@@ -23,6 +23,13 @@ class ConfigError(Exception):
     """citegraph.toml is not valid TOML, has an unknown key or a wrong type, or holds an invalid regex."""
 
 
+class QueuesConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # C# methods whose first argument names the job they send
+    send_methods: list[str] = Field(default_factory=lambda: ["Enqueue", "EnqueueAsync"])
+
+
 class CitegraphConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -32,6 +39,7 @@ class CitegraphConfig(BaseModel):
     extra_redaction_patterns: list[str] = Field(default_factory=list[str])
     # "off": each git repository is one logical repo; "auto" or a list of folders: projects inside a repository
     projects: Literal["off", "auto"] | list[str] = "off"
+    queues: QueuesConfig = Field(default_factory=QueuesConfig)
 
     @field_validator("extra_redaction_patterns")
     @classmethod

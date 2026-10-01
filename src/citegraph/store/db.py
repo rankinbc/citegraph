@@ -168,6 +168,16 @@ class Store:
                 "INSERT INTO entry_points(file_id, kind, name, target, line) VALUES (?, ?, ?, ?, ?)",
                 (file_id, e.kind, e.name, e.target, e.line),
             )
+        for h in result.queue_handlers:
+            self._write(
+                "INSERT INTO queue_handlers(file_id, protocol, name, handler_qualified, line) VALUES (?, ?, ?, ?, ?)",
+                (file_id, h.protocol, h.name, h.handler_qualified, h.line),
+            )
+        for c in result.string_consts:
+            self._write(
+                "INSERT INTO string_consts(file_id, qualified_name, value, line) VALUES (?, ?, ?, ?)",
+                (file_id, c.qualified_name, c.value, c.line),
+            )
         return file_id
 
     def delete_repos_not_in(self, names: Iterable[str], keep_prefixes: Iterable[str] = ()) -> int:

@@ -8,7 +8,7 @@ import tree_sitter_python as tspython
 from tree_sitter import Language, Node, Parser
 
 from citegraph.extract.base import module_name_for, package_for
-from citegraph.models import ConfigKey, EntryPoint, ExtractResult, ImportFact, Reference, Symbol
+from citegraph.models import ConfigKey, EntryPoint, ExtractResult, ImportFact, QueueHandler, Reference, Symbol
 
 _LANGUAGE = Language(tspython.language())
 _parser_instance: Parser | None = None
@@ -16,6 +16,8 @@ _parser_instance: Parser | None = None
 _ENV_GETTERS = frozenset({"os.getenv", "os.environ.get", "getenv", "environ.get"})
 _ENV_MAPPINGS = frozenset({"os.environ", "environ"})
 _PARAM_SKIP = frozenset({"comment", "keyword_separator", "positional_separator"})
+_ACTOR_DECORATORS = frozenset({"dramatiq.actor", "actor"})
+_SEND_METHODS = frozenset({"send", "send_with_options"})
 
 
 def _parser() -> Parser:
@@ -100,6 +102,7 @@ class _Visitor:
                     self._walk(child, scope, class_q)
             definition = node.child_by_field_name("definition")
             if definition is not None:
+                self._queue_handler(node, definition, scope)
                 self._visit(definition, scope, class_q)
         elif kind in ("import_statement", "import_from_statement"):
             self._import(node)
@@ -114,6 +117,27 @@ class _Visitor:
             self._walk(node, scope, class_q)
         else:
             self._walk(node, scope, class_q)
+
+    def _queue_handler(self, node: Node, definition: Node, scope: str) -> None:
+        """`@dramatiq.actor(actor_name="x")` or a bare `@actor`: the function handles jobs named x, or its own name."""
+        if definition.type != "function_definition":
+            return
+        function = _text(definition.child_by_field_name("name"))
+        for decorator in node.named_children:
+            if decorator.type != "decorator" or not decorator.named_children:
+                continue
+            expression = decorator.named_children[0]
+            called = expression.child_by_field_name("function") if expression.type == "call" else expression
+            if called is None or _dotted(called) not in _ACTOR_DECORATORS:
+                continue
+            name = function
+            args = expression.child_by_field_name("arguments") if expression.type == "call" else None
+            for arg in args.named_children if args is not None else []:
+                if arg.type == "keyword_argument" and _text(arg.child_by_field_name("name")) == "actor_name":
+                    name = _string_value(arg.child_by_field_name("value")) or name
+            self.result.queue_handlers.append(
+                QueueHandler(name=name, handler_qualified=f"{scope}.{function}", line=_line(node))
+            )
 
     def _class(self, node: Node, scope: str) -> None:
         name = _text(node.child_by_field_name("name"))
@@ -181,6 +205,7 @@ class _Visitor:
         self.result.references.append(
             Reference(from_qualified=scope, to_name=name, kind="call", line=_line(node))
         )
+        self._queue_send(node, fn, scope)
         if name in _ENV_GETTERS:
             args = node.child_by_field_name("arguments")
             first = args.named_children[0] if args is not None and args.named_children else None
@@ -189,6 +214,39 @@ class _Visitor:
                 self.result.config_keys.append(
                     ConfigKey(key_path=key, line=_line(node), origin="code-read", reader_qualified=scope)
                 )
+
+    def _queue_send(self, node: Node, fn: Node, scope: str) -> None:
+        """`<actor>.send(...)` (resolved later to the actor function) and `<x>.enqueue(Message(actor_name="x"))`."""
+        if fn.type != "attribute":
+            return
+        method = _text(fn.child_by_field_name("attribute"))
+        obj = fn.child_by_field_name("object")
+        receiver = _dotted(obj) if obj is not None else None
+        if method in _SEND_METHODS and receiver is not None:
+            self.result.references.append(
+                Reference(from_qualified=scope, to_name=receiver, kind="queue_actor", line=_line(node))
+            )
+            return
+        if method != "enqueue":
+            return
+        args = node.child_by_field_name("arguments")
+        message = args.named_children[0] if args is not None and args.named_children else None
+        called = (
+            message.child_by_field_name("function")
+            if message is not None and message.type == "call"
+            else None
+        )
+        dotted = _dotted(called) if called is not None else None
+        if message is None or dotted is None or dotted.rsplit(".", 1)[-1] != "Message":
+            return
+        margs = message.child_by_field_name("arguments")
+        for arg in margs.named_children if margs is not None else []:
+            if arg.type == "keyword_argument" and _text(arg.child_by_field_name("name")) == "actor_name":
+                job = _string_value(arg.child_by_field_name("value"))
+                if job:
+                    self.result.references.append(
+                        Reference(from_qualified=scope, to_name=job, kind="queue", line=_line(node))
+                    )
 
     def _env_subscript(self, node: Node, scope: str) -> None:
         value = node.child_by_field_name("value")

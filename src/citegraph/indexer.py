@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import time
+from collections.abc import Sequence
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -11,7 +12,8 @@ from pydantic import BaseModel, Field
 
 from citegraph import __version__
 from citegraph.config import load_config
-from citegraph.extract import EXTRACTORS, stored_module
+from citegraph.extract import extractor_for, stored_module
+from citegraph.extract.csharp import DEFAULT_SEND_METHODS
 from citegraph.home import index_path
 from citegraph.ingest import MAX_FILE_BYTES, IngestError, RepoInfo, discover_repos, scan_projects
 from citegraph.models import ExtractResult
@@ -27,14 +29,15 @@ RESOLVER_FINGERPRINT_KEY = "resolver_fingerprint"
 CONTENT_FINGERPRINT_KEY = "content_fingerprint"
 
 
-def content_fingerprint() -> str:
+def content_fingerprint(send_methods: Sequence[str] = DEFAULT_SEND_METHODS) -> str:
     """Everything that decides stored rows besides the files themselves: the citegraph version (extractors),
-    the schema version, and the redaction patterns and parameters, including extra patterns from citegraph.toml.
+    the schema version, the redaction patterns and parameters (including extra patterns from citegraph.toml), and
+    the configured queue send methods.
 
     Rows are rewritten only when a file's content hash changes, so an index whose stored fingerprint differs
     has every file re-extracted and rewritten through the sanitizing write path.
     """
-    return f"{__version__}:{SCHEMA_VERSION}:{redaction_fingerprint()}"
+    return f"{__version__}:{SCHEMA_VERSION}:{redaction_fingerprint()}:{','.join(sorted(send_methods))}"
 
 
 class IndexStats(BaseModel):
@@ -53,15 +56,18 @@ class IndexStats(BaseModel):
     warnings: list[str] = Field(default_factory=list[str])
 
 
-def _extract_one(item: tuple[str, str, bytes]) -> ExtractResult:
-    rel_path, lang, data = item
+ExtractItem = tuple[str, str, bytes, tuple[str, ...]]
+
+
+def _extract_one(item: ExtractItem) -> ExtractResult:
+    rel_path, lang, data, send_methods = item
     try:
-        return EXTRACTORS[lang].extract(rel_path, data)
+        return extractor_for(lang, send_methods).extract(rel_path, data)
     except Exception:  # one bad file never aborts a run; it is counted as a parse error
         return ExtractResult(parse_error=True)
 
 
-def _extract_all(items: list[tuple[str, str, bytes]], jobs: int | None) -> list[ExtractResult]:
+def _extract_all(items: list[ExtractItem], jobs: int | None) -> list[ExtractResult]:
     if jobs == 1 or len(items) < PARALLEL_THRESHOLD or not items:
         return [_extract_one(item) for item in items]
     with ProcessPoolExecutor(max_workers=jobs) as pool:
@@ -69,7 +75,12 @@ def _extract_all(items: list[tuple[str, str, bytes]], jobs: int | None) -> list[
 
 
 def _index_repo(
-    store: Store, info: RepoInfo, jobs: int | None, stats: IndexStats, rewrite: bool
+    store: Store,
+    info: RepoInfo,
+    jobs: int | None,
+    stats: IndexStats,
+    rewrite: bool,
+    send_methods: tuple[str, ...] = DEFAULT_SEND_METHODS,
 ) -> tuple[bool, bool]:
     """Write the repo's new and changed files and delete its removed ones.
 
@@ -101,7 +112,7 @@ def _index_repo(
     else:
         for file_id in deleted:
             store.delete_file_id(file_id)
-    results = _extract_all([(rel, lang, data) for rel, lang, _, data in todo], jobs)
+    results = _extract_all([(rel, lang, data, send_methods) for rel, lang, _, data in todo], jobs)
     for (rel, lang, digest, data), result in zip(todo, results, strict=True):
         module = stored_module(rel, lang, result)
         store.upsert_file(repo_id, rel, lang, digest, data.count(b"\n") + 1, result, module)
@@ -125,7 +136,8 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
     try:
         run_id = store.start_run()
         store.commit()
-        content = content_fingerprint()
+        send_methods = tuple(config.queues.send_methods)
+        content = content_fingerprint(send_methods)
         rewrite = store.get_meta(CONTENT_FINGERPRINT_KEY) != content
         changed = removed = False
         shas: dict[str, str] = {}
@@ -139,7 +151,7 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
                 continue
             stats.warnings.extend(warnings)
             for info in infos:
-                repo_changed, repo_removed = _index_repo(store, info, jobs, stats, rewrite)
+                repo_changed, repo_removed = _index_repo(store, info, jobs, stats, rewrite, send_methods)
                 changed, removed = changed or repo_changed, removed or repo_removed
                 shas[info.name] = info.head_sha
         # a repo that failed to scan this run (transient git error) keeps its previously indexed

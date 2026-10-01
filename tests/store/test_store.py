@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from citegraph.models import ConfigKey, ExtractResult, Reference, Symbol, ToolError
+from citegraph.models import ConfigKey, ExtractResult, Reference, StringConst, Symbol, ToolError
 from citegraph.store import EdgeRow, Store
 from citegraph.store.schema import SCHEMA_VERSION
 from tests.helpers import load_secret_cases
@@ -150,3 +150,17 @@ def test_delete_repos_keeps_the_projects_of_a_repo_that_failed_to_scan(tmp_path:
     assert store.delete_repos_not_in(["other", "mono"], keep_prefixes=["mono"]) == 1
     names = {str(r["name"]) for r in store.conn.execute("SELECT name FROM repos")}
     assert names == {"mono", "mono/components/api", "other"}
+
+
+def test_a_secret_shaped_string_constant_is_redacted(tmp_path: Path) -> None:
+    store = Store.open(tmp_path / "i.db")
+    repo = store.upsert_repo("shop", "/r/shop", "a" * 40)
+    result = result_with("f")
+    result.string_consts.append(StringConst(qualified_name="Shop.Keys.Token", value=SECRET, line=3))
+    result.string_consts.append(
+        StringConst(qualified_name="Shop.Tasks.Classify", value="classify_stems", line=4)
+    )
+    store.upsert_file(repo, "Keys.cs", "csharp", "h", 5, result, module="Shop")
+    values = [str(r["value"]) for r in store.conn.execute("SELECT value FROM string_consts ORDER BY line")]
+    assert values[1] == "classify_stems"
+    assert SECRET not in values[0] and values[0].startswith("<redacted")
