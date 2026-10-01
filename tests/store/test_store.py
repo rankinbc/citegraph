@@ -35,7 +35,7 @@ def test_upsert_file_replaces_previous_rows(tmp_path: Path) -> None:
     store.commit()
     names = [r["name"] for r in store.conn.execute("SELECT name FROM symbols ORDER BY name")]
     assert names == ["g", "m"]
-    assert store.file_hashes(repo) == {"m.py": "h2"}
+    assert {path: row.content_hash for path, row in store.stored_files(repo).items()} == {"m.py": "h2"}
     assert store.count("config_keys") == 1
     norm = store.conn.execute("SELECT key_norm FROM config_keys").fetchone()["key_norm"]
     assert norm == "payment:apiurl"

@@ -71,6 +71,36 @@ def test_redaction_change_rewrites_unchanged_files(sample_root: Path) -> None:
     assert index_root(sample_root).files_changed == 0
 
 
+def test_new_extra_pattern_matching_a_stored_path_leaves_one_redacted_row(
+    make_repo: MakeRepo, repos_root: Path
+) -> None:
+    make_repo("ledger", {"src/acme_internal_ledger/core.py": "def post_entry():\n    pass\n"})
+    index_root(repos_root)
+    config = 'extra_redaction_patterns = ["acme_internal_[a-z_]+"]\n'
+    (repos_root / "citegraph.toml").write_text(config, encoding="utf-8")
+    for _ in range(3):
+        stats = index_root(repos_root)
+        assert stats.leak_scan_clean is True
+        assert b"acme_internal_ledger" not in Path(stats.db_path).read_bytes().lower()
+        store = open_index(stats.db_path)
+        try:
+            paths = [r["path"] for r in store.conn.execute("SELECT path FROM files")]
+        finally:
+            store.close()
+        assert paths == ["src/<redacted:custom>/core.py"]
+
+
+def test_rows_deleted_by_a_rewrite_leave_no_bytes_behind(make_repo: MakeRepo, repos_root: Path) -> None:
+    # enough rows that the old cells sit in freed space rather than being overwritten by the new rows
+    make_repo("ledger", {f"src/acme_internal_ledger/m{i}.py": "def f():\n    pass\n" for i in range(10)})
+    index_root(repos_root)
+    config = 'extra_redaction_patterns = ["acme_internal_[a-z_]+"]\n'
+    (repos_root / "citegraph.toml").write_text(config, encoding="utf-8")
+    stats = index_root(repos_root)
+    assert stats.leak_scan_clean is True
+    assert b"acme_internal_ledger" not in Path(stats.db_path).read_bytes().lower()
+
+
 def test_incremental_matches_full_reindex(sample_root: Path) -> None:
     index_root(sample_root, name="inc")
     billing = sample_root / "billing"

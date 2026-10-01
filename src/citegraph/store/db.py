@@ -8,6 +8,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import NamedTuple
 
 from citegraph.keys import normalize_key
 from citegraph.models import ExtractResult, ToolError
@@ -26,6 +27,11 @@ class EdgeRow:
     candidates: int
 
 
+class StoredFile(NamedTuple):
+    id: int
+    content_hash: str
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -41,6 +47,8 @@ class Store:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys=ON")
+        # zero deleted content: rows dropped when the redaction rules change must not survive in freed pages
+        conn.execute("PRAGMA secure_delete=ON")
         conn.executescript(SCHEMA)
         store = cls(conn)
         store._write(
@@ -73,12 +81,24 @@ class Store:
         row = self.conn.execute("SELECT id FROM repos WHERE name = ?", (sanitize(name),)).fetchone()
         return int(row["id"])
 
-    def file_hashes(self, repo_id: int) -> dict[str, str]:
-        rows = self.conn.execute("SELECT path, content_hash FROM files WHERE repo_id = ?", (repo_id,))
-        return {str(r["path"]): str(r["content_hash"]) for r in rows}
+    def stored_files(self, repo_id: int) -> dict[str, StoredFile]:
+        """Stored path -> row id and content hash.
+
+        The paths were sanitized under the rules in force when they were written. Compare them with this run's
+        keys, but never pass one back as a write parameter: `_write` sanitizes it again under the current rules
+        and may turn it into a different string, so a lookup by it can miss the stored row.
+        """
+        rows = self.conn.execute("SELECT id, path, content_hash FROM files WHERE repo_id = ?", (repo_id,))
+        return {str(r["path"]): StoredFile(int(r["id"]), str(r["content_hash"])) for r in rows}
 
     def delete_file(self, repo_id: int, rel_path: str) -> None:
         self._write("DELETE FROM files WHERE repo_id = ? AND path = ?", (repo_id, rel_path))
+
+    def delete_file_id(self, file_id: int) -> None:
+        self._write("DELETE FROM files WHERE id = ?", (file_id,))
+
+    def delete_repo_files(self, repo_id: int) -> None:
+        self._write("DELETE FROM files WHERE repo_id = ?", (repo_id,))
 
     def upsert_file(
         self,

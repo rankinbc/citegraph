@@ -69,7 +69,7 @@ def _extract_all(items: list[tuple[str, str, bytes]], jobs: int | None) -> list[
 
 def _index_repo(store: Store, info: RepoInfo, jobs: int | None, stats: IndexStats, rewrite: bool) -> bool:
     repo_id = store.upsert_repo(info.name, str(info.path), info.head_sha)
-    existing = store.file_hashes(repo_id)
+    existing = store.stored_files(repo_id)
     current: set[str] = set()
     todo: list[tuple[str, str, str, bytes]] = []
     for file in info.files:
@@ -80,11 +80,17 @@ def _index_repo(store: Store, info: RepoInfo, jobs: int | None, stats: IndexStat
         current.add(key)
         data = (info.path / file.rel_path).read_bytes()
         digest = hashlib.blake2b(data, digest_size=16).hexdigest()
-        if rewrite or existing.get(key) != digest:
+        stored = existing.get(key)
+        if rewrite or stored is None or stored.content_hash != digest:
             todo.append((file.rel_path, file.lang, digest, data))
-    deleted = [path for path in existing if path not in current]
-    for path in deleted:
-        store.delete_file(repo_id, path)
+    deleted = [row.id for path, row in existing.items() if path not in current]
+    if rewrite:
+        # rows written under another content fingerprint: a stored path sanitized under other redaction rules
+        # may match no key this run computes, so every row of the repo goes and every file is written again below
+        store.delete_repo_files(repo_id)
+    else:
+        for file_id in deleted:
+            store.delete_file_id(file_id)
     results = _extract_all([(rel, lang, data) for rel, lang, _, data in todo], jobs)
     for (rel, lang, digest, data), result in zip(todo, results, strict=True):
         module = module_name_for(rel) if lang == "python" else None
