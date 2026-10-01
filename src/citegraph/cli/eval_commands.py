@@ -9,6 +9,7 @@ from pathlib import Path
 
 import click
 
+from citegraph.config import ConfigError
 from citegraph.evaluation.corpus import fetch_corpus, load_corpus
 from citegraph.evaluation.golden import load_golden
 from citegraph.evaluation.report import check_regression, write_baseline, write_report
@@ -17,6 +18,7 @@ from citegraph.evaluation.spans import load_corpus_text
 from citegraph.home import corpus_dir
 from citegraph.indexer import index_root
 from citegraph.query.common import QueryContext
+from citegraph.redact import sanitize
 from citegraph.store import Store
 
 FILE = click.Path(exists=True, dir_okay=False, path_type=Path)
@@ -57,7 +59,10 @@ def eval_run(
     """Index the corpus, answer the golden questions, score citegraph against grep."""
     root = corpus_dir() / "repos"
     fetch_corpus(load_corpus(corpus_file), root)
-    stats = index_root(root, name="eval-corpus")
+    try:
+        stats = index_root(root, name="eval-corpus")
+    except ConfigError as exc:
+        raise click.ClickException(sanitize(str(exc))) from exc
     click.echo(f"indexed corpus: {stats.symbols} symbols, {stats.edges} edges in {stats.duration_s:.1f}s")
     questions = [q for q in load_golden(golden) if subset == "all" or q.ci]
     ctx = QueryContext(Store.open_read_only(Path(stats.db_path)))

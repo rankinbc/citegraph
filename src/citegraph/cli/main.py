@@ -12,10 +12,12 @@ import click
 from citegraph import __version__
 from citegraph.audit import AuditLog, summarize
 from citegraph.cli.eval_commands import eval_group
+from citegraph.config import ConfigError, load_config
 from citegraph.home import index_path
 from citegraph.indexer import index_root
 from citegraph.ingest import IngestError
 from citegraph.query import TOOLS
+from citegraph.redact import configure_extra_patterns, sanitize
 from citegraph.redact.leakscan import scan_paths
 
 ROOT = click.Path(exists=True, file_okay=False, path_type=Path)
@@ -29,6 +31,14 @@ def _parse_param(raw: str) -> tuple[str, object]:
         return key, json.loads(value)
     except json.JSONDecodeError:
         return key, value
+
+
+def _configure_redaction(root: Path) -> None:
+    """Apply citegraph.toml's extra redaction patterns to every response and audit line, before any tool runs."""
+    try:
+        configure_extra_patterns(load_config(root).extra_redaction_patterns)
+    except ConfigError as exc:
+        raise click.ClickException(sanitize(str(exc))) from exc
 
 
 @click.group()
@@ -48,8 +58,8 @@ def index(root: Path, name: str | None, jobs: int | None) -> None:
     """Index every git repo under ROOT (or ROOT itself if it is a repo)."""
     try:
         stats = index_root(root, name=name, jobs=jobs)
-    except IngestError as exc:
-        raise click.ClickException(str(exc)) from exc
+    except (IngestError, ConfigError) as exc:
+        raise click.ClickException(sanitize(str(exc))) from exc
     for warning in stats.warnings:
         click.echo(f"warning: {warning}", err=True)
     click.echo(
@@ -73,6 +83,7 @@ def serve(root: Path, name: str | None) -> None:
     """Run the read-only MCP server over stdio."""
     from citegraph.mcp.server import build_server  # imported here: keeps `citegraph --help` fast
 
+    _configure_redaction(root)
     logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
     build_server(index_path(root, name)).run()
 
@@ -80,6 +91,7 @@ def serve(root: Path, name: str | None) -> None:
 def _run_tool(tool: str, kwargs: dict[str, object], root: Path, name: str | None) -> dict[str, object]:
     from citegraph.mcp.server import ToolRunner
 
+    _configure_redaction(root)
     fn = TOOLS[tool]
     runner = ToolRunner(index_path(root, name), AuditLog())
     return runner.run(tool, kwargs, lambda ctx: fn(ctx, **kwargs), client="cli")
