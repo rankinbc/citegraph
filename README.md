@@ -9,6 +9,32 @@ answers structural questions over [MCP](https://modelcontextprotocol.io): *who c
 A reach B, where is this config key set and read.* Every answer comes with `path:line` evidence, the commit it was
 computed at, how it was derived, and a confidence score that was measured, not guessed.
 
+## What it does
+
+In plain terms: citegraph builds a map of how your code is wired together, and lets an AI coding assistant look
+things up in that map instead of searching text.
+
+1. **It reads your code.** Point it at a folder of git repositories. It parses every git-tracked Python file and records each
+   function, class and method, which functions call which, what each file imports, and which configuration settings
+   (environment variables, keys in JSON/YAML config files) are defined or read where. It stores names and
+   locations only, never the code itself or any config values.
+2. **It answers questions about that map.** It runs as a tool server that AI assistants such as Claude Code connect
+   to through MCP (the Model Context Protocol, the standard way assistants call external tools). The assistant can
+   then ask:
+   - *Who calls this function?* and *What does this function call?*
+   - *How does this endpoint end up calling that database helper?* (the shortest call chain between two functions)
+   - *Where is the `PAYMENT_API_URL` setting defined, and which code reads it?*
+   - *What is in this repo?* (languages, main modules, entry points, most-called functions)
+3. **Every answer shows its work.** Each result lists the file and line it came from, the git commit it was computed
+   at, which rule linked the two pieces of code (same file, an import, a unique name, or a name-only guess), and how
+   confident that rule is, measured against a labeled test set. Low-confidence guesses are hidden unless the
+   assistant asks for them, and the answer says how many were hidden. If a repo has new commits since it was
+   indexed, the answer is flagged as stale.
+
+**Before and after.** Asked who calls `flask.json.loads`, a plain text search (the eval's grep baseline) turns up 21
+functions that use the name, and the assistant has to open each one to find the 5 real callers. citegraph returns exactly those 5, each with its
+file, line, and a 0.9 confidence ([example below](#example)).
+
 ## Why
 
 Ask a coding agent "what calls `place_order`?" and it greps. That works, but:
