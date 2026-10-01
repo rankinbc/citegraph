@@ -58,8 +58,13 @@ def test_instantiation_is_a_caller(sample_ctx: QueryContext) -> None:
 def test_empty_result_has_note(sample_ctx: QueryContext) -> None:
     answer = what_calls(sample_ctx, "notify_customer", min_confidence=0.9)
     assert answer.data == []
-    assert answer.source == "parsed"
+    assert answer.source == "derived"
+    assert answer.confidence == CONFIDENCE["cross_repo_unique"]  # the hidden edge, not certainty
     assert any("no callers" in n for n in answer.notes)
+    assert (
+        "1 lower-confidence candidate hidden (rules: cross_repo_unique); pass min_confidence=0.6 to see them"
+        in (answer.notes)
+    )
 
 
 @pytest.mark.parametrize("kwargs", [{"depth": 4}, {"depth": 0}, {"min_confidence": 1.5}, {"limit": 500}])
@@ -106,3 +111,63 @@ def test_ambiguous_edges_are_noted(tmp_path: Path) -> None:
     answer = what_calls(ctx, "m1.handle_event", min_confidence=CONFIDENCE["ambiguous"])
     assert [i.rule for i in answer.data] == ["ambiguous"]
     assert any("1 of 2 candidates" in n for n in answer.notes)
+
+
+AMBIGUOUS_ONLY = {
+    "m1.py": "def handle_event():\n    pass\n",
+    "m2.py": "def handle_event():\n    pass\n",
+    "caller.py": "def go(bus):\n    bus.handle_event()\n",
+}
+HIDDEN_AMBIGUOUS = "lower-confidence {} hidden (rules: ambiguous); pass min_confidence=0.1 to see them"
+
+
+@pytest.fixture
+def ambiguous_ctx(tmp_path: Path) -> QueryContext:
+    """A store whose only edges are ambiguous (0.15), all below the default min_confidence of 0.5."""
+    return QueryContext(build_store(tmp_path / "i.db", {"a": AMBIGUOUS_ONLY}), head_fn=lambda _p: "0" * 40)
+
+
+def test_hidden_callers_are_counted(ambiguous_ctx: QueryContext) -> None:
+    answer = what_calls(ambiguous_ctx, "m1.handle_event")
+    assert answer.data == []
+    assert answer.source == "derived"
+    assert answer.confidence == CONFIDENCE["ambiguous"]
+    assert "1 " + HIDDEN_AMBIGUOUS.format("candidate") in answer.notes
+
+
+def test_hidden_callees_are_counted(ambiguous_ctx: QueryContext) -> None:
+    answer = what_does_it_call(ambiguous_ctx, "caller.go")
+    assert answer.data == []
+    assert answer.source == "derived"
+    assert answer.confidence == CONFIDENCE["ambiguous"]
+    assert "2 " + HIDDEN_AMBIGUOUS.format("candidates") in answer.notes
+
+
+def test_no_hidden_note_once_the_threshold_admits_them(ambiguous_ctx: QueryContext) -> None:
+    answer = what_does_it_call(ambiguous_ctx, "caller.go", min_confidence=0.1)
+    assert len(answer.data) == 2
+    assert not any("hidden" in n for n in answer.notes)
+
+
+def test_symbol_without_any_edge_keeps_full_confidence(ambiguous_ctx: QueryContext) -> None:
+    answer = what_calls(ambiguous_ctx, "caller.go")
+    assert answer.data == []
+    assert answer.source == "derived"
+    assert answer.confidence == 1.0
+    assert not any("hidden" in n for n in answer.notes)
+
+
+def test_find_path_counts_hidden_first_hops(ambiguous_ctx: QueryContext) -> None:
+    answer = find_path(ambiguous_ctx, "caller.go", "m1.handle_event")
+    assert answer.data == []
+    assert answer.source == "derived"
+    assert answer.confidence == CONFIDENCE["ambiguous"]
+    assert "2 " + HIDDEN_AMBIGUOUS.format("candidates") in answer.notes
+    assert len(find_path(ambiguous_ctx, "caller.go", "m1.handle_event", min_confidence=0.1).data) == 2
+
+
+def test_explain_edge_without_an_edge_is_derived(ambiguous_ctx: QueryContext) -> None:
+    answer = explain_edge(ambiguous_ctx, "m1.handle_event", "m2.handle_event")
+    assert answer.data == []
+    assert answer.source == "derived"
+    assert answer.confidence == 1.0

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import sqlite3
 from collections.abc import Iterable
 from typing import Literal
@@ -90,6 +91,34 @@ def _neighbors(
     return ctx.rows(sql, (*ids, min_confidence, *CALL_KINDS))
 
 
+def _hidden_edges(
+    ctx: QueryContext, symbol_id: int, direction: Literal["in", "out"], min_confidence: float
+) -> list[sqlite3.Row]:
+    """The symbol's own (level-1) call edges below min_confidence."""
+    column = "to_symbol_id" if direction == "in" else "from_symbol_id"
+    kind_marks = ",".join("?" * len(CALL_KINDS))
+    return ctx.rows(
+        f"SELECT rule, confidence FROM edges WHERE {column} = ? AND confidence < ? AND kind IN ({kind_marks})",
+        (symbol_id, min_confidence, *CALL_KINDS),
+    )
+
+
+def _hidden_note(hidden: list[sqlite3.Row]) -> str:
+    rules = ", ".join(sorted({str(r["rule"]) for r in hidden}))
+    # one decimal, rounded down, so the suggested threshold admits every hidden edge
+    lowest = math.floor(min(float(r["confidence"]) for r in hidden) * 10 + 1e-9) / 10
+    noun = "candidate" if len(hidden) == 1 else "candidates"
+    return (
+        f"{len(hidden)} lower-confidence {noun} hidden (rules: {rules}); "
+        f"pass min_confidence={lowest:g} to see them"
+    )
+
+
+def _empty_answer_confidences(hidden: list[sqlite3.Row]) -> list[float]:
+    """An empty answer is as certain as its best hidden edge allows; 1.0 only with no edges at all."""
+    return [max(float(r["confidence"]) for r in hidden)] if hidden else []
+
+
 def _symbols_by_id(ctx: QueryContext, ids: Iterable[int]) -> dict[int, sqlite3.Row]:
     wanted = sorted(set(ids))
     if not wanted:
@@ -106,6 +135,13 @@ def _traverse(
     limit: int,
     direction: Literal["in", "out"],
 ) -> Answer[list[EdgeInfo]]:
+    """Call edges breadth-first from `symbol` up to `depth`, keeping those at or above min_confidence.
+
+    The source is always "derived". The symbol's own call edges below min_confidence are counted in a note.
+    Confidence is the lowest among the returned edges; for an empty answer it is the highest confidence among
+    the hidden edges, so "no callers" never claims more certainty than the best hidden candidate allows, and
+    1.0 only when the symbol has no call edges at all.
+    """
     check_int("depth", depth, 1, 3)
     check_float("min_confidence", min_confidence, 0.0, 1.0)
     check_int("limit", limit, 1, MAX_LIMIT)
@@ -143,11 +179,14 @@ def _traverse(
     if not items:
         what = "callers" if direction == "in" else "callees"
         notes.append(f"no {what} at min_confidence >= {min_confidence}")
+    hidden = _hidden_edges(ctx, int(target["id"]), direction, min_confidence)
+    if hidden:
+        notes.append(_hidden_note(hidden))
     return ctx.answer(
         items,
         evidence=evidence,
-        sources=["derived"] if items else [],
-        confidences=[i.confidence for i in items],
+        sources=["derived"],
+        confidences=[i.confidence for i in items] if items else _empty_answer_confidences(hidden),
         repos={target["repo"], *(i.symbol.repo for i in items)},
         notes=notes,
     )
@@ -168,6 +207,8 @@ def what_does_it_call(
 def find_path(
     ctx: QueryContext, from_symbol: str, to_symbol: str, max_depth: int = 6, min_confidence: float = 0.5
 ) -> Answer[list[PathStep]]:
+    """Shortest call path at or above min_confidence. With no path, the start symbol's hidden call edges are
+    counted in a note and set the confidence, by the same rule as `_traverse`."""
     check_int("max_depth", max_depth, 1, 10)
     check_float("min_confidence", min_confidence, 0.0, 1.0)
     start, goal = ctx.resolve_symbol(from_symbol), ctx.resolve_symbol(to_symbol)
@@ -186,8 +227,18 @@ def find_path(
         frontier = next_frontier
     repos = {start["repo"], goal["repo"]}
     if goal_id not in parent:
-        note = f"no call path within {max_depth} hops at min_confidence >= {min_confidence}"
-        return ctx.answer([], evidence=[], sources=[], confidences=[], repos=repos, notes=[note])
+        notes = [f"no call path within {max_depth} hops at min_confidence >= {min_confidence}"]
+        hidden = _hidden_edges(ctx, start_id, "out", min_confidence)
+        if hidden:
+            notes.append(_hidden_note(hidden))
+        return ctx.answer(
+            [],
+            evidence=[],
+            sources=["derived"],
+            confidences=_empty_answer_confidences(hidden),
+            repos=repos,
+            notes=notes,
+        )
     chain: list[tuple[int, sqlite3.Row]] = []
     node = goal_id
     while (link := parent[node]) is not None:
@@ -203,7 +254,7 @@ def find_path(
     return ctx.answer(
         steps,
         evidence=[_edge_evidence(row) for _, row in chain],
-        sources=["derived"] if edges else [],
+        sources=["derived"],
         confidences=[e.confidence for e in edges],
         repos=repos | {s.symbol.repo for s in steps},
     )
@@ -232,7 +283,7 @@ def explain_edge(ctx: QueryContext, from_symbol: str, to_symbol: str) -> Answer[
     return ctx.answer(
         explanations,
         evidence=[_edge_evidence(r) for r in rows],
-        sources=["derived"] if rows else [],
+        sources=["derived"],
         confidences=[e.confidence for e in explanations],
         repos={source["repo"], target["repo"]},
         notes=notes,

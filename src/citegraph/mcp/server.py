@@ -142,7 +142,9 @@ def build_server(db_path: Path, audit: AuditLog | None = None) -> MCPServer[Any]
     def what_calls(
         symbol: str, ctx: Context[Any, Any], depth: int = 1, min_confidence: float = 0.5, limit: int = 25
     ) -> dict[str, object]:
-        """Callers of a symbol (depth 1-3). Each edge has rule, confidence and the path:line of the call."""
+        """Callers of a symbol (depth 1-3). Each edge has rule, confidence and the path:line of the call.
+        Edges below min_confidence (default 0.5) are hidden and counted in notes; pass min_confidence=0.1 to
+        see lower-confidence candidates such as name-only (ambiguous) matches."""
         args: dict[str, object] = {
             "symbol": symbol,
             "depth": depth,
@@ -157,7 +159,9 @@ def build_server(db_path: Path, audit: AuditLog | None = None) -> MCPServer[Any]
     def what_does_it_call(
         symbol: str, ctx: Context[Any, Any], depth: int = 1, min_confidence: float = 0.5, limit: int = 25
     ) -> dict[str, object]:
-        """Callees of a symbol (depth 1-3). Each edge has rule, confidence and the path:line of the call."""
+        """Callees of a symbol (depth 1-3). Each edge has rule, confidence and the path:line of the call.
+        Edges below min_confidence (default 0.5) are hidden and counted in notes; pass min_confidence=0.1 to
+        see lower-confidence candidates such as name-only (ambiguous) matches."""
         args: dict[str, object] = {
             "symbol": symbol,
             "depth": depth,
