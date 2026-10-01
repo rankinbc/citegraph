@@ -156,6 +156,8 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
         if removed:  # deleted symbols keep their trigrams in older FTS segments until a merge
             store.optimize_fts()
             store.commit()
+        if rewrite and removed:  # the upgrade path: an index written by an older release may hold residue
+            store.vacuum()
         stats.repos = len(shas)
         stats.symbols = store.count("symbols")
         stats.edges = store.count("edges")

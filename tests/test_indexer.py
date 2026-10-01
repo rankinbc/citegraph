@@ -1,3 +1,4 @@
+import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
@@ -125,6 +126,32 @@ def test_a_rewrite_leaves_no_trigram_of_a_redacted_name_in_the_fts_index(
     stats = index_root(repos_root)
     assert stats.leak_scan_clean is True
     assert ledger_residue(stats.db_path) == []
+
+
+def test_a_rewrite_clears_residue_of_an_index_built_without_secure_delete(
+    make_repo: MakeRepo, repos_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    open_store = Store.open
+
+    # the index as releases before secure_delete wrote it
+    def open_without_secure_delete(path: Path) -> Store:
+        store = open_store(path)
+        store.conn.execute("PRAGMA secure_delete=OFF")
+        return store
+
+    make_repo("ledger", LEDGER_FILES)
+    with monkeypatch.context() as patch:
+        patch.setattr(Store, "open", staticmethod(open_without_secure_delete))
+        index_root(repos_root)
+    (repos_root / "citegraph.toml").write_text(LEDGER_PATTERN, encoding="utf-8")
+    stats = index_root(repos_root)
+    assert stats.leak_scan_clean is True
+    assert ledger_residue(stats.db_path) == []
+    conn = sqlite3.connect(stats.db_path)
+    try:
+        assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+    finally:
+        conn.close()
 
 
 @pytest.mark.parametrize("edit", ["delete", "change"])

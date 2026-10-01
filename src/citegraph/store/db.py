@@ -206,6 +206,15 @@ class Store:
         """
         self._write("INSERT INTO symbols_fts(symbols_fts) VALUES('optimize')")
 
+    def vacuum(self) -> None:
+        """Rebuild the file, so free pages and free space in pages hold no deleted content.
+
+        `secure_delete` only zeroes what is deleted while it is on; an index written before it was turned on keeps
+        older deleted content until this runs. VACUUM cannot run inside a transaction, so this commits first.
+        """
+        self.commit()
+        self._write("VACUUM")
+
     def set_meta(self, key: str, value: str) -> None:
         self._write("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", (key, value))
 
