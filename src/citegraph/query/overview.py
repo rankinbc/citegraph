@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from citegraph.models import Answer, Evidence, ToolError
 from citegraph.query.common import SYMBOL_SELECT, QueryContext, SymbolInfo, symbol_info
 
+MAX_ENTRY_POINTS = 50
+
 
 class ModuleCount(BaseModel):
     module: str
@@ -66,6 +68,10 @@ def repo_overview(ctx: QueryContext, repo: str) -> Answer[RepoOverview]:
             (repo_id,),
         )
     ]
+    notes: list[str] = []
+    if len(entry_points) > MAX_ENTRY_POINTS:
+        notes.append(f"truncated: {len(entry_points) - MAX_ENTRY_POINTS} more entry points")
+        entry_points = entry_points[:MAX_ENTRY_POINTS]
     fan_in = ctx.rows(
         "SELECT e.to_symbol_id AS id, count(DISTINCT e.from_symbol_id) AS n FROM edges e "
         "JOIN symbols s ON s.id = e.to_symbol_id JOIN files f ON f.id = s.file_id "
@@ -92,4 +98,5 @@ def repo_overview(ctx: QueryContext, repo: str) -> Answer[RepoOverview]:
         sources=["parsed", *(["derived"] if hotspots else [])],
         confidences=[],
         repos={repo},
+        notes=notes,
     )

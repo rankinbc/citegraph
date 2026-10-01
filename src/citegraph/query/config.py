@@ -8,6 +8,8 @@ from citegraph.keys import normalize_key
 from citegraph.models import Answer, Evidence, ToolError
 from citegraph.query.common import MAX_LIMIT, QueryContext, check_int, like_escape
 
+MAX_LOCATIONS_PER_KEY = 50  # each of definitions and reads
+
 
 class ConfigLocation(BaseModel):
     repo: str
@@ -61,6 +63,13 @@ def find_config_key(ctx: QueryContext, pattern: str, limit: int = 25) -> Answer[
         else []
     )
     keys = keys[:limit]
+    for key in keys:
+        for label, locations in (("definitions", key.definitions), ("reads", key.reads)):
+            if len(locations) > MAX_LOCATIONS_PER_KEY:
+                notes.append(
+                    f"truncated: {key.key} has {len(locations) - MAX_LOCATIONS_PER_KEY} more {label}"
+                )
+                del locations[MAX_LOCATIONS_PER_KEY:]
     evidence = [
         Evidence(repo=loc.repo, path=loc.path, line=loc.line, commit=commits[(loc.repo, loc.path, loc.line)])
         for key in keys

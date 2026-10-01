@@ -138,13 +138,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "click", specifier = ">=8.1" },
+    { name = "click", specifier = ">=8.5" },
     { name = "matplotlib", marker = "extra == 'eval'", specifier = ">=3.9" },
     { name = "mcp", specifier = ">=2.2,<3" },
-    { name = "pydantic", specifier = ">=2.9" },
+    { name = "pydantic", specifier = ">=2.13" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "tree-sitter", specifier = ">=0.23" },
-    { name = "tree-sitter-python", specifier = ">=0.23" },
+    { name = "tree-sitter", specifier = ">=0.26" },
+    { name = "tree-sitter-python", specifier = ">=0.25" },
 ]
 provides-extras = ["eval"]
 
