@@ -1,3 +1,6 @@
+import base64
+import random
+
 import pytest
 
 from citegraph.redact import configure_extra_patterns, find_secrets, sanitize, sanitize_obj
@@ -50,6 +53,33 @@ def test_base64_with_slash_is_redacted_as_one_value() -> None:
     value = next(c for c in SECRETS if c.kind == "base64-with-slash").value
     assert value.count("/") >= 2
     assert sanitize(f"key {value} end") == "key <redacted:high-entropy> end"
+
+
+@pytest.mark.parametrize(
+    ("kind", "kept"),
+    [("env-assignment-base64-slash", "SOME_SERVICE_SECRET_KEY="), ("dir-prefixed-base64-slash", "my-app/")],
+)
+def test_base64_with_slash_after_a_key_or_folder_is_redacted_as_one_value(kind: str, kept: str) -> None:
+    value = next(c for c in SECRETS if c.kind == kind).value
+    assert sanitize(f"key {value} end") == f"key {kept}<redacted:high-entropy> end"
+
+
+def test_random_base64_with_slash_is_fully_redacted_in_env_lines() -> None:
+    rng = random.Random(20260930)
+    values: list[str] = []
+    while len(values) < 2000:
+        value = base64.b64encode(rng.randbytes(30)).decode()  # 40 characters
+        if "/" in value:
+            values.append(value)
+    templates = [
+        "AWS_SECRET_ACCESS_KEY={}",
+        "export API_TOKEN={}",
+        "- DB_" + PASSWORD_KEY.upper() + "={}",
+        "{}",
+    ]
+    texts = [(template.format(value), value) for value in values for template in templates]
+    fully_redacted = sum(value not in sanitize(text) for text, value in texts)
+    assert fully_redacted / len(texts) >= 0.99
 
 
 def test_high_entropy_segment_of_a_path_is_redacted_alone() -> None:

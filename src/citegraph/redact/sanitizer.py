@@ -13,6 +13,7 @@ from itertools import pairwise
 from typing import cast
 
 from citegraph.redact.patterns import (
+    ASSIGNMENT,
     BASE64_MIN_CLASS_CHANGE_RATE,
     BUILTIN_PATTERNS,
     ENTROPY_MIN_LENGTH,
@@ -42,7 +43,13 @@ def redaction_fingerprint() -> str:
     payload = json.dumps(
         [
             [(p.kind, p.regex.pattern, p.regex.flags, p.value_group) for p in BUILTIN_PATTERNS + _extra],
-            [ENTROPY_TOKEN.pattern, ENTROPY_MIN_LENGTH, ENTROPY_THRESHOLD, BASE64_MIN_CLASS_CHANGE_RATE],
+            [
+                ENTROPY_TOKEN.pattern,
+                ENTROPY_MIN_LENGTH,
+                ENTROPY_THRESHOLD,
+                BASE64_MIN_CLASS_CHANGE_RATE,
+                ASSIGNMENT.pattern,
+            ],
         ]
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
@@ -96,17 +103,46 @@ def is_base64_shaped(token: str) -> bool:
 def _entropy_spans(token: str, start: int) -> list[tuple[int, int]]:
     """High-entropy spans in one ENTROPY_TOKEN match starting at `start`.
 
-    A token without "/", or a base64-shaped one, is judged whole. Any other token holding "/" is a path or
-    URL: each segment is judged on its own, so digits in a folder or file name never redact the path while a
-    long random segment is still caught.
+    A token without "/" is judged whole. A token holding "/" is first split at each assignment "=", so the
+    key name of a .env line never decides how its value is judged; each part is then judged by `_part_spans`.
     """
-    if is_high_entropy(token) and ("/" not in token or is_base64_shaped(token)):
-        return [(start, start + len(token))]
+    if "/" not in token:
+        return [(start, start + len(token))] if is_high_entropy(token) else []
     spans: list[tuple[int, int]] = []
-    for segment in token.split("/"):
+    for part in ASSIGNMENT.split(token):
+        spans.extend(_part_spans(part, start))
+        start += len(part) + 1
+    return spans
+
+
+def _part_spans(part: str, start: int) -> list[tuple[int, int]]:
+    """A part without "/", or a base64-shaped one, is judged whole. Any other part is a path or URL.
+
+    Standard base64 never holds "-" or "_", so a base64 value in a path can only follow the last segment holding
+    one: that remainder (the value in `my-app/<value>`) is judged whole when it is base64-shaped. Every other
+    segment is judged on its own, so digits in a folder or file name never redact the path while a long random
+    segment is still caught.
+    """
+    if is_high_entropy(part) and ("/" not in part or is_base64_shaped(part)):
+        return [(start, start + len(part))]
+    segments = part.split("/")
+    folders = max(
+        (i + 1 for i, segment in enumerate(segments) if "-" in segment or "_" in segment), default=0
+    )
+    remainder = "/".join(segments[folders:])
+    remainder_whole = (
+        folders > 0
+        and len(remainder) >= ENTROPY_MIN_LENGTH
+        and is_high_entropy(remainder)
+        and is_base64_shaped(remainder)
+    )
+    spans: list[tuple[int, int]] = []
+    for segment in segments[:folders] if remainder_whole else segments:
         if len(segment) >= ENTROPY_MIN_LENGTH and is_high_entropy(segment):
             spans.append((start, start + len(segment)))
         start += len(segment) + 1
+    if remainder_whole:
+        spans.append((start, start + len(remainder)))
     return spans
 
 

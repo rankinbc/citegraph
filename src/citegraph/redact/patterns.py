@@ -57,3 +57,7 @@ ENTROPY_THRESHOLD = 4.2
 # symbol) between about two of every three adjacent characters; path segments are words and identifiers
 # and change far less often (sanitizer.is_base64_shaped).
 BASE64_MIN_CLASS_CHANGE_RATE = 0.45
+
+# An assignment "=" inside a token holding "/" (`AWS_SECRET_ACCESS_KEY=<value>` is one token): the key and the
+# value are judged apart. An "=" before another "=" or at the end of the token is base64 padding and stays.
+ASSIGNMENT = re.compile(r"=(?=[^=])")
