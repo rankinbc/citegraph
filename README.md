@@ -26,7 +26,8 @@ await queue.EnqueueAsync(DramatiqTasks.ClassifyStems, new object[] { versionId.T
 # components/worker/app/tasks.py
 @dramatiq.actor(actor_name="classify_stems")
 def classify_stems(version_id):
-    from audio.stems import classify_stems as classify_audio   # re-exported by audio/stems/__init__.py
+    from audio.stems import classify_stems as classify_audio  # re-exported by audio/stems/__init__.py
+
     return classify_audio([version_id])
 ```
 
