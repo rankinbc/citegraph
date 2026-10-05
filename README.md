@@ -43,6 +43,26 @@ Site.Api.Endpoints.VersionEndpoints.ClassifyStems     components/bff
 → audio.stems.classify.classify_one                   components/analysis   src/audio/stems/classify.py:6     same_file     0.95
 ```
 
+The same answer as a picture, with each arrow labelled by the rule that linked the two functions, its confidence,
+and the line the call is made on:
+
+```mermaid
+flowchart LR
+    subgraph bff["components/bff (C#)"]
+        A["VersionEndpoints.ClassifyStems"]
+    end
+    subgraph worker["components/worker (Python)"]
+        B["app.tasks.classify_stems"]
+    end
+    subgraph analysis["components/analysis (Python)"]
+        C["audio.stems.classify.classify_stems"]
+        D["audio.stems.classify.classify_one"]
+    end
+    A -- "queue_match · 0.9<br/>VersionEndpoints.cs:7" --> B
+    B -- "import_scope · 0.9<br/>tasks.py:8" --> C
+    C -- "same_file · 0.95<br/>classify.py:6" --> D
+```
+
 That is real output (the example in [tests/test_cross_service.py](tests/test_cross_service.py), shown as a table).
 citegraph resolved the C# constant to its value, matched it to the Python actor with that name, and followed the
 package re-export. Your assistant gets the whole chain in one call and opens only the three lines that matter.
