@@ -31,6 +31,8 @@ def search_symbols(
     text = query.strip()
     if not text:
         raise ToolError("invalid_argument", "query must not be empty")
+    if "\0" in text:  # FTS5 ends a query string at a NUL and reports a syntax error
+        raise ToolError("invalid_argument", "query must not contain NUL characters")
     filters = ""
     params: list[object] = []
     if kind:

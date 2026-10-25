@@ -9,6 +9,8 @@ from typing import cast
 import yaml
 from pydantic import BaseModel
 
+from citegraph.ingest import GIT_SAFE_CONFIG
+
 
 class CorpusError(Exception):
     """git could not be run, or its output could not be decoded."""
@@ -29,7 +31,7 @@ def load_corpus(path: Path) -> list[CorpusRepo]:
 
 def _run_git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     try:
-        return subprocess.run(["git", *args], check=check, capture_output=True, text=True)
+        return subprocess.run(["git", *GIT_SAFE_CONFIG, *args], check=check, capture_output=True, text=True)
     except OSError as exc:
         raise CorpusError(f"could not run git ({exc}); install git and make sure it is on PATH") from exc
     except UnicodeDecodeError as exc:

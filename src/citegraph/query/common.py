@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from citegraph.ingest import GIT_SAFE_CONFIG
 from citegraph.models import Answer, AsOf, Evidence, Source, ToolError, combine_sources
 from citegraph.store import Store
 
@@ -78,7 +79,7 @@ def check_float(name: str, value: float, lo: float, hi: float) -> None:
 def git_head(path: Path) -> str | None:
     try:
         out = subprocess.run(
-            ["git", "-C", str(path), "rev-parse", "HEAD"],
+            ["git", *GIT_SAFE_CONFIG, "-C", str(path), "rev-parse", "HEAD"],
             capture_output=True,
             text=True,
             timeout=5,

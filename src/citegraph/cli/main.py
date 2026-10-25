@@ -20,6 +20,7 @@ from citegraph.ingest import IngestError
 from citegraph.query import TOOLS
 from citegraph.redact import configure_extra_patterns, sanitize
 from citegraph.redact.leakscan import scan_paths
+from citegraph.store import NewerIndexError
 
 
 class RootPath(click.Path):
@@ -99,7 +100,7 @@ def index(root: Path, name: str | None, jobs: int | None) -> None:
     """Index every git repo under ROOT (or ROOT itself if it is a repo)."""
     try:
         stats = index_root(root, name=name, jobs=jobs)
-    except (IngestError, ConfigError) as exc:
+    except (IngestError, ConfigError, NewerIndexError) as exc:
         raise click.ClickException(sanitize(str(exc))) from exc
     for warning in stats.warnings:
         click.echo(f"warning: {sanitize(warning)}", err=True)

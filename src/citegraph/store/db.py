@@ -32,8 +32,34 @@ class StoredFile(NamedTuple):
     content_hash: str
 
 
+class NewerIndexError(Exception):
+    """The index was written by a newer citegraph, whose schema this build cannot read or safely rewrite."""
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _stored_schema(conn: sqlite3.Connection) -> str | None:
+    try:
+        row = conn.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
+    except sqlite3.DatabaseError:  # no meta table: a new file, or not an index at all
+        return None
+    return None if row is None else str(row[0])
+
+
+def _newer_message(stored: str) -> str | None:
+    """The refusal for an index whose schema is newer than this build's, or None if it is not newer.
+
+    A uvx copy and a `uv tool` copy of different releases share one citegraph home, so the older one must not
+    restamp or wipe what the newer one wrote.
+    """
+    if not (stored.isdigit() and int(stored) > int(SCHEMA_VERSION)):
+        return None
+    return (
+        f"index was built by a newer citegraph (schema {stored}); this is schema {SCHEMA_VERSION} - upgrade, "
+        "or set CITEGRAPH_HOME to keep this version's indexes apart"
+    )
 
 
 class Store:
@@ -45,6 +71,11 @@ class Store:
         path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(path)
         conn.row_factory = sqlite3.Row
+        stored = _stored_schema(conn)
+        newer = None if stored is None else _newer_message(stored)
+        if newer is not None:  # checked before anything is written: the newer index is left exactly as it was
+            conn.close()
+            raise NewerIndexError(f"{path.name}: {newer}")
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys=ON")
         # zero deleted content: rows dropped when the redaction rules change must not survive in freed pages
@@ -66,11 +97,12 @@ class Store:
             )
         conn = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True, check_same_thread=False)
         conn.row_factory = sqlite3.Row
-        try:
-            row = conn.execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
-        except sqlite3.DatabaseError:  # no meta table: not an index at all
-            row = None
-        if row is None or row["value"] != SCHEMA_VERSION:
+        stored = _stored_schema(conn)
+        newer = None if stored is None else _newer_message(stored)
+        if newer is not None:
+            conn.close()
+            raise ToolError("not_indexed", newer, hint="upgrade citegraph, or set CITEGRAPH_HOME")
+        if stored != SCHEMA_VERSION:
             conn.close()
             raise ToolError(
                 "not_indexed",

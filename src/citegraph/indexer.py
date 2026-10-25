@@ -15,7 +15,15 @@ from citegraph.config import load_config
 from citegraph.extract import extractor_for, stored_module
 from citegraph.extract.csharp import DEFAULT_SEND_METHODS
 from citegraph.home import index_path
-from citegraph.ingest import MAX_FILE_BYTES, IngestError, RepoInfo, discover_repos, scan_projects
+from citegraph.ingest import (
+    MAX_FILE_BYTES,
+    IngestError,
+    RepoInfo,
+    discover_repos,
+    inside_repo,
+    repo_name,
+    scan_projects,
+)
 from citegraph.models import ExtractResult
 from citegraph.redact import configure_extra_patterns, redaction_fingerprint, sanitize_path
 from citegraph.redact.leakscan import scan_paths
@@ -92,13 +100,18 @@ def _index_repo(
     current: set[str] = set()
     todo: list[tuple[str, str, str, bytes]] = []
     replaced = False
+    real_root = info.path.resolve()
     for file in info.files:
         if file.size > MAX_FILE_BYTES:
             stats.skipped_large += 1
             continue
+        path = info.path / file.rel_path
+        # checked again at read time: a link swapped in since the scan is not followed
+        if not inside_repo(path, real_root):
+            continue
         key = sanitize_path(file.rel_path)
         current.add(key)
-        data = (info.path / file.rel_path).read_bytes()
+        data = path.read_bytes()
         digest = hashlib.blake2b(data, digest_size=16).hexdigest()
         stored = existing.get(key)
         if rewrite or stored is None or stored.content_hash != digest:
@@ -143,11 +156,12 @@ def index_root(root: Path, name: str | None = None, jobs: int | None = None) -> 
         shas: dict[str, str] = {}
         failed: list[str] = []
         for repo_path in repos:
+            name = repo_name(root, repo_path)
             try:
-                infos, warnings = scan_projects(repo_path, config)
+                infos, warnings = scan_projects(repo_path, config, name)
             except IngestError as exc:
                 stats.warnings.append(str(exc))
-                failed.append(repo_path.name)
+                failed.append(name)
                 continue
             stats.warnings.extend(warnings)
             for info in infos:

@@ -1,3 +1,3 @@
-from citegraph.store.db import EdgeRow, Store
+from citegraph.store.db import EdgeRow, NewerIndexError, Store
 
-__all__ = ["EdgeRow", "Store"]
+__all__ = ["EdgeRow", "NewerIndexError", "Store"]

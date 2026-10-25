@@ -45,10 +45,27 @@ class RepoInfo(BaseModel):
     files: list[RepoFile]
 
 
+# An indexed repo's own .git/config is untrusted input. Of the settings that make git run a program, only
+# core.fsmonitor is reachable from the local reads citegraph makes: `ls-files` loads the index and runs the
+# fsmonitor hook to ask what changed (`rev-parse` does not today, but gets the same flag). Hooks, filters,
+# diff.external, the pager (stdout is never a terminal here) and the ssh/credential/protocol settings are not
+# consulted by these commands, so they are left alone. The system and global config are the user's own and are
+# kept: they may carry safe.directory and similar settings that normal use needs, so GIT_CONFIG_NOSYSTEM is not set.
+GIT_SAFE_CONFIG = ("-c", "core.fsmonitor=false")
+# repo discovery: how many folders below the root to look, and folders not searched for repos (dot-folders such
+# as .git and .venv are skipped too); a folder that is itself a repo is still found under any name
+MAX_DISCOVERY_DEPTH = 4
+SKIP_DIRS = frozenset({"node_modules", "venv", "__pycache__", "site-packages", "bin", "obj"})
+
+
 def _git(repo: Path, *args: str) -> str:
     try:
         out = subprocess.run(
-            ["git", "-C", str(repo), *args], check=True, capture_output=True, text=True, encoding="utf-8"
+            ["git", *GIT_SAFE_CONFIG, "-C", str(repo), *args],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
         )
     except subprocess.CalledProcessError as exc:
         raise IngestError(f"git {args[0]} failed in {repo.name}: {exc.stderr.strip()}") from exc
@@ -60,10 +77,42 @@ def _git(repo: Path, *args: str) -> str:
 
 
 def discover_repos(root: Path) -> list[Path]:
+    """The root if it is a repo, else every repo up to MAX_DISCOVERY_DEPTH folders below it, sorted by path.
+
+    A found repo is not searched further (its nested folders belong to it), and symlinked or junctioned
+    folders are never followed.
+    """
     root = root.resolve()
     if (root / ".git").exists():
         return [root]
-    return sorted((p for p in root.iterdir() if p.is_dir() and (p / ".git").exists()), key=lambda p: p.name)
+    found: list[Path] = []
+    _find_repos(root, 1, found)
+    return sorted(found, key=lambda p: p.relative_to(root).as_posix())
+
+
+def _find_repos(folder: Path, depth: int, found: list[Path]) -> None:
+    try:
+        children = list(folder.iterdir())
+    except OSError:  # unreadable folder: nothing to index there
+        return
+    for child in children:
+        if _is_link(child) or not child.is_dir():
+            continue
+        if (child / ".git").exists():
+            found.append(child)  # not searched further: its folders, nested checkouts included, belong to it
+        elif depth < MAX_DISCOVERY_DEPTH and child.name not in SKIP_DIRS and not child.name.startswith("."):
+            _find_repos(child, depth + 1, found)
+
+
+def _is_link(path: Path) -> bool:
+    # is_junction: an NTFS junction is not a symlink to Python but leads outside the tree just the same
+    return path.is_symlink() or path.is_junction()
+
+
+def repo_name(root: Path, repo: Path) -> str:
+    """A discovered repo's name: its path below the root (a direct child's is its folder name), or the root's."""
+    root = root.resolve()
+    return repo.name if repo == root else repo.relative_to(root).as_posix()
 
 
 def head_sha(repo: Path) -> str:
@@ -94,11 +143,24 @@ def _selected(rel_path: str, config: CitegraphConfig) -> bool:
     return not any(_matches(rel_path, p) for p in config.exclude)
 
 
-def scan_repo(repo: Path, config: CitegraphConfig) -> RepoInfo:
+def inside_repo(path: Path, root: Path) -> bool:
+    """Whether path is a regular file, not itself a link, whose real location is inside root.
+
+    git never lists files below a tracked symlink, but a working tree can still lead outside the repo: a tracked
+    symlink to a file, or a folder replaced by a symlink or junction after checkout.
+    """
+    try:
+        return not _is_link(path) and path.is_file() and path.resolve().is_relative_to(root)
+    except OSError:
+        return False
+
+
+def scan_repo(repo: Path, config: CitegraphConfig, name: str | None = None) -> RepoInfo:
     try:
         sha = head_sha(repo)
     except IngestError as exc:
         raise IngestError(f"{repo.name}: no commits yet, or HEAD is unreadable: {exc}") from exc
+    real_root = repo.resolve()
     files: list[RepoFile] = []
     for rel in tracked_files(repo):
         lang = language_for(rel)
@@ -107,9 +169,9 @@ def scan_repo(repo: Path, config: CitegraphConfig) -> RepoInfo:
         if not _selected(rel, config):
             continue
         path = repo / rel
-        if path.is_file():
+        if inside_repo(path, real_root):
             files.append(RepoFile(rel_path=rel, lang=lang, size=path.stat().st_size))
-    return RepoInfo(name=repo.name, path=repo, head_sha=sha, files=files)
+    return RepoInfo(name=name or repo.name, path=repo, head_sha=sha, files=files)
 
 
 def project_roots(tracked: list[str], projects: str | list[str]) -> list[str]:
@@ -140,12 +202,14 @@ def project_roots(tracked: list[str], projects: str | list[str]) -> list[str]:
     return sorted(roots)
 
 
-def scan_projects(repo: Path, config: CitegraphConfig) -> tuple[list[RepoInfo], list[str]]:
+def scan_projects(
+    repo: Path, config: CitegraphConfig, name: str | None = None
+) -> tuple[list[RepoInfo], list[str]]:
     """The repository as logical repos, one per project folder plus one for the rest, and any warnings.
 
     A project's files are re-rooted at its folder, so module names and evidence paths start there.
     """
-    info = scan_repo(repo, config)
+    info = scan_repo(repo, config, name)
     if config.projects == "off":
         return [info], []
     tracked = tracked_files(repo)
@@ -156,7 +220,7 @@ def scan_projects(repo: Path, config: CitegraphConfig) -> tuple[list[RepoInfo], 
         known = {f for folder in folders for f in _parents(folder)}
         for root in roots:
             if root not in known:
-                warnings.append(f"{repo.name}: project folder {root!r} holds no tracked files")
+                warnings.append(f"{info.name}: project folder {root!r} holds no tracked files")
         roots = [r for r in roots if r in known]
     by_root: dict[str | None, list[RepoFile]] = defaultdict(list)
     deepest_first = sorted(roots, key=len, reverse=True)
