@@ -278,18 +278,25 @@ Three layers, in order of importance:
 1. **Schema.** No table has a column for source text or config values. This is the primary defense.
 2. **Sanitizer.** Every string field on write (`Store.upsert`) and on egress (MCP responses, audit args,
    exports) passes `sanitize()`:
-   - Known secret shapes: cloud access keys, GitHub/Slack/OpenAI/Anthropic token prefixes, PEM private keys,
-     JWTs, connection-string credential segments (keeps `Server`/`Database`, drops `User`/`Password`/`Key`).
-   - High-entropy tokens above a length and entropy threshold, except identifiers made of words (decision 40).
+   - Known secret shapes: cloud access keys, GitHub/Slack/OpenAI/Anthropic/GitLab (`glpat-` etc.)/Shopify
+     (`shpat_`/`shpss_`/`shpca_`)/HashiCorp Vault (`hvs.`)/Discord token shapes, PEM private keys, JWTs,
+     connection-string credential segments (keeps `Server`/`Database`, drops `User`/`Password`/`Key`), the password
+     in URL userinfo, and any value assigned to a secret-named key (password, secret, token, credentials, `*_key`)
+     in YAML, JSON, .env or code. A quoted value needs 8 characters and a letter; an unquoted one also needs a digit
+     and must not read as a name or dotted name.
+   - High-entropy tokens above a length and entropy threshold, except identifiers made of words (decision 40),
+     `data:` URI payloads, digests (hash-sized hex or base64 after `h1:`/`shaN:`, as `shaN-`, or under hash-named
+     keys), hex or UUID values under id-named keys, and base64 that decodes to prose (decision 44).
    - Matches become `<redacted:kind>`.
    - Extra patterns configurable in `citegraph.toml`.
 3. **Leak scanner.** `citegraph leak-scan <paths>` scans files with the same rules; a SQLite file is scanned cell
    by cell (TEXT cells of ordinary tables), so free pages and FTS index blobs are not covered by the scan. Deleted
    rows are zeroed (`secure_delete`), a run that deleted rows optimizes the FTS index, and a rewrite also runs
    VACUUM, so they hold no residue. `index` runs the scan on the database at the end of every run and records
-   `leak_scan_clean`. Also shipped as a pre-commit hook.
+   `leak_scan_clean`. Files with a UTF-16 byte-order mark are decoded as UTF-16; other files with a NUL byte in
+   the first 8 KiB are treated as binary and skipped. Also shipped as a pre-commit hook.
 
-**String constants.** Job names behind constants are the one stored value: only `const string` values shaped like `^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$`, written through the sanitizing path, so a secret-shaped value is redacted; the leak scan covers the `string_consts` table.
+**String constants.** No constant's value is stored. A `const string` value shaped like `^[A-Za-z_][A-Za-z0-9_.:-]{0,63}$` is kept as a one-way keyed digest (`names.name_digest`, 24 hex characters), and the queue resolver matches handler names by the same digest (decision 43). Someone holding the index file could still confirm a guessed weak value against its digest.
 
 ## 8. CLI and configuration
 
@@ -603,3 +610,27 @@ Implements [docs/specs/2026-10-01-cross-service-links-design.md](specs/2026-10-0
 41. **Redacted paths stay distinct.** The indexer keys a file by its sanitized path, so two paths that redacted
     alike shared one row: the second file replaced the first and both were extracted again on every run. A redacted
     path's markers now carry eight hex digits of a hash of the raw path (`<redacted:kind~1a2b3c4d>`).
+
+### Review fixes (2026-10-24)
+
+42. **Indexing never runs a repo's code.** `git ls-files` honours the indexed repo's `.git/config`, and
+    `core.fsmonitor` there names a program git runs. Every git call passes `-c core.fsmonitor=false`; the read-only
+    commands citegraph runs consult no other config that executes anything. System and global config are left on,
+    since they belong to the user. Files that are links, or resolve outside their repo, are skipped at scan time and
+    again just before reading.
+43. **Constants are digests.** A secret in a `const string` sat in plain text in `string_consts`. The extractor cannot
+    tell which constants a send will use (the send is usually in another file), so it stores a keyed digest of every
+    name-shaped value instead, and `resolve/queues.py` compares digests. Config keys read in code (`os.getenv`,
+    `IConfiguration[...]`) are stored only when every `:`-separated part is name-shaped.
+44. **Leak-scan precision.** New named shapes (section 7) close the misses found in review, and the entropy
+    exemptions remove lockfile and fixture noise: on 471 files of the monorepo the scan went from 972 high-entropy
+    findings to none. Overlap checks bisect over sorted kept hits and line numbers over newline offsets, so 30,000
+    hits scan in about 4 s instead of 42 s.
+45. **Hostile config files.** YAML is walked once per node, so an alias is reported as one key where it is used and
+    `<<` merges add none; more than 100,000 pairs makes the file a parse error. JSON key lines come from one pass with
+    bracket depth and a binary search, which fixes non-ASCII keys and is linear.
+46. **Discovery and versions.** Repos are discovered up to four levels below the root and named by their relative
+    path. An index stamped with a newer schema is never rewritten: `index` refuses and read-only opens report
+    `not_indexed` naming both versions, since a `uvx` copy and a `uv tool` copy share `~/.citegraph`.
+47. **Smaller fixes.** `actor_name=CONSTANT` uses a module-level string constant; `from m import *` is recorded and
+    followed; a NUL in `search_symbols` is `invalid_argument` rather than an FTS5 error.

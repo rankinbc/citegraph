@@ -112,6 +112,16 @@ service is indexed as its own project. Job queues (Dramatiq, with C# or Python s
 anything else, such as an HTTP call, can be declared in a `citegraph.overrides.yaml`
 ([guide](docs/guide.md#linking-services)).
 
+**Or install it as a Claude Code plugin.** You still need uv, but there is no separate install or `claude mcp add`:
+
+```text
+/plugin marketplace add rankinbc/claude-plugins
+/plugin install citegraph@rankinbc
+```
+
+Start a new session in the folder you want mapped, run `/citegraph:index`, and ask. The plugin serves the folder
+Claude Code was started in, pinned to the plugin's version and dependencies.
+
 Setup for other MCP clients, team setup, configuration and tips: [docs/guide.md](docs/guide.md).
 
 ## How it works
@@ -139,8 +149,12 @@ sequenceDiagram
 
 ## Safe to leave connected
 
-- Stores names and locations only, never source code or config values. The one stored value: name-shaped C#
-  `const string` job names, redacted like everything else.
+- Stores names and locations only, never source code or config values. A C# `const string` is kept only as a
+  one-way digest, so a job sent by constant can still be matched to its handler; config keys read in code are kept
+  only when they are shaped like names. Notes you write in `citegraph.overrides.yaml` are returned as written
+  (after redaction), so keep secrets out of them.
+- Indexing a repo never runs its code: citegraph turns off the git setting a repo can use to launch a program, skips
+  links that point outside the repo, and caps hostile inputs such as YAML alias bombs.
 - Redacts anything that looks like a secret, on the way into the index and again on the way out.
 - Read-only: no write or shell tools. Every call is logged locally (`citegraph audit tail`).
 - Runs on your machine. Indexing and serving make no network calls; your assistant sees only the answers it asks for.

@@ -25,6 +25,18 @@ citegraph index ~/src/my-repos                               # once, then after 
 claude mcp add citegraph -- citegraph serve --root ~/src/my-repos
 ```
 
+Or install the Claude Code plugin, which runs citegraph with uv from the plugin's own pinned copy and serves the
+folder Claude Code was started in:
+
+```text
+/plugin marketplace add rankinbc/claude-plugins
+/plugin install citegraph@rankinbc
+/citegraph:index                                             # in each project, then after you pull
+```
+
+If `/mcp` shows the server as failed the first time, uv was still setting up its environment; reconnect it from
+`/mcp`.
+
 Start Claude Code and run `/mcp`: citegraph should be listed as connected with nine tools. To share the setup with
 your team, add it with `--scope project` instead; Claude Code then writes the server entry to a `.mcp.json` file you can
 commit.
@@ -281,10 +293,22 @@ citegraph defends against accidental exposure of secrets and source code through
   never results) to a local JSONL audit log.
 
 It does not sandbox the agent: pair it with your agent's permission rules. See [the design](design.md), section 7.
+Indexing reads repos it may not trust: git runs with `core.fsmonitor` off, so a repo's `.git/config` cannot make
+it start a program; files that are links, or that resolve outside their repo, are skipped; YAML anchors are walked
+once and a file needing more than 100,000 key/value pairs is skipped as a parse error. Notes in
+`citegraph.overrides.yaml` are stored and returned as written (after redaction), so don't put secrets in them.
+
 The leak scanner also ships as a pre-commit hook (`citegraph-leak-scan` in
-[.pre-commit-hooks.yaml](../.pre-commit-hooks.yaml)).
+[.pre-commit-hooks.yaml](../.pre-commit-hooks.yaml)). The hook pins `language_version: python3.13` and excludes
+lockfiles, including `go.sum` and `packages.lock.json`. Files with a UTF-16 byte-order mark are decoded; other files
+with a NUL byte in their first 8 KiB are treated as binary and skipped.
 
 ## Limitations
+
+- **Discovery.** Repos are found up to four folders below the root you index (not inside another repo, and not
+  through linked folders or tool folders such as `node_modules` and `.venv`). A repo deeper than one level is named
+  by its path below the root, such as `services/api`.
+- **Star imports.** `from m import *` is followed, but `__all__` is not read; only `_private` names are excluded.
 
 - **Languages.** Python and C#; TypeScript is next. The C# rules (`declared_type` 0.85, `same_namespace` 0.9) start
   at the values in the [C# design spec](specs/2026-10-01-csharp-design.md) and are not yet calibrated on a labeled

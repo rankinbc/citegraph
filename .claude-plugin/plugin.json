@@ -1,0 +1,19 @@
+{
+  "name": "citegraph",
+  "version": "0.2.0",
+  "description": "A code map for Claude: ask what calls this, or how a request reaches that code across services and languages, and get the exact chain with file:line evidence. Local, read-only, for Python and C#.",
+  "author": { "name": "Brian Rankin", "url": "https://github.com/rankinbc" },
+  "homepage": "https://github.com/rankinbc/citegraph",
+  "repository": "https://github.com/rankinbc/citegraph",
+  "license": "MIT",
+  "keywords": ["mcp", "code-graph", "call-graph", "python", "csharp", "code-navigation"],
+  "mcpServers": {
+    "citegraph": {
+      "command": "uv",
+      "args": [
+        "run", "--project", "${CLAUDE_PLUGIN_ROOT}", "--frozen", "--no-dev", "--quiet",
+        "citegraph", "serve", "--root", "${CLAUDE_PROJECT_DIR}"
+      ]
+    }
+  }
+}
