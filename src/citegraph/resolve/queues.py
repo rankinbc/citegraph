@@ -6,6 +6,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from citegraph.extract.names import name_digest
 from citegraph.resolve.csharp import CSharpResolver
 from citegraph.resolve.graph import Graph, RefRow, Resolution, Sym
 from citegraph.store import Store
@@ -19,6 +20,7 @@ PythonCall = Callable[[Graph, int, Sym, str], Resolution | None]
 @dataclass
 class QueueIndex:
     handlers: dict[str, list[Sym]] = field(default_factory=lambda: defaultdict(list))
+    handlers_by_digest: dict[str, list[Sym]] = field(default_factory=lambda: defaultdict(list))
     handler_ids: set[int] = field(default_factory=set[int])
     constants: dict[str, str] = field(default_factory=dict[str, str])
 
@@ -29,6 +31,7 @@ def load_queue_index(store: Store, graph: Graph) -> QueueIndex:
         sym = graph.file_syms[int(row["file_id"])].get(str(row["handler_qualified"]))
         if sym is not None:
             index.handlers[str(row["name"])].append(sym)
+            index.handlers_by_digest[name_digest(str(row["name"]))].append(sym)
             index.handler_ids.add(sym.id)
     for row in store.conn.execute("SELECT qualified_name, value FROM string_consts ORDER BY id"):
         index.constants.setdefault(str(row["qualified_name"]), str(row["value"]))
@@ -49,11 +52,11 @@ class QueueResolver:
             target = self.python_call(self.graph, ref.file_id, source, ref.to_name)
             hits = [t for t in target.targets if t.id in self.index.handler_ids] if target is not None else []
             return Resolution(hits, "queue_match") if hits else None
-        if ref.kind == "queue_const":
-            name = self.csharp.constant_value(ref, source, self.index.constants)
+        if ref.kind == "queue_const":  # constants are stored as digests of their values (extract.names)
+            digest = self.csharp.constant_value(ref, source, self.index.constants) or ""
+            handlers = self.index.handlers_by_digest.get(digest, [])
         else:
-            name = ref.to_name
-        handlers = self.index.handlers.get(name or "", [])
+            handlers = self.index.handlers.get(ref.to_name, [])
         if not handlers:
             return None
         return Resolution(handlers, "queue_match" if len(handlers) == 1 else "ambiguous")

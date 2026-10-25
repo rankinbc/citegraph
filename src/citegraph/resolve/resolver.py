@@ -14,9 +14,22 @@ from citegraph.store import EdgeRow, Store
 MAX_REEXPORT_HOPS = 3
 
 
+def _from_star(graph: Graph, file_id: int, parts: list[str], repo_id: int) -> str | None:
+    """`name.rest` through the file's `from m import *` imports: the first module that defines `name`, else (for a
+    chain of star imports) the first module imported. A `_private` name is never star-imported."""
+    stars = graph.star_imports.get(file_id, [])
+    if not stars or parts[0].startswith("_"):
+        return None
+    defines = next(
+        (s for s in stars if lookup(graph, f"{s}.{parts[0]}", repo_id, "python") is not None), stars[0]
+    )
+    return ".".join([defines, *parts])
+
+
 def _reexport(graph: Graph, qualified: str, repo_id: int) -> str | None:
-    """`pkg.name.rest` -> `<target>.rest` when module `pkg` imports `name` from `<target>`, deepest module first.
-    The referencing repo's files are searched first: projects of one monorepo reuse module names."""
+    """`pkg.name.rest` -> `<target>.rest` when module `pkg` imports `name` from `<target>` (by name, or by
+    `from <target> import *`), deepest module first. The referencing repo's files are searched first: projects of
+    one monorepo reuse module names."""
     parts = qualified.split(".")
     for k in range(len(parts) - 1, 0, -1):
         files = graph.module_files.get(".".join(parts[:k]), [])
@@ -24,6 +37,9 @@ def _reexport(graph: Graph, qualified: str, repo_id: int) -> str | None:
             target = graph.imports[file_id].get(parts[k])
             if target is not None:
                 return ".".join([target, *parts[k + 1 :]])
+            starred = _from_star(graph, file_id, parts[k:], repo_id)
+            if starred is not None:
+                return starred
     return None
 
 
@@ -65,6 +81,10 @@ def _resolve_call(graph: Graph, file_id: int, source: Sym, to_name: str) -> Reso
     if imported is not None:
         hit = _lookup_python(graph, ".".join([imported, *rest]), repo_id)
         return Resolution([hit], "import_scope") if hit is not None else None
+    starred = _from_star(graph, file_id, parts, repo_id)
+    hit = _lookup_python(graph, starred, repo_id) if starred is not None else None
+    if hit is not None:
+        return Resolution([hit], "import_scope")
     return by_name(graph, repo_id, parts[-1], "python")
 
 

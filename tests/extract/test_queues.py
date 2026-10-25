@@ -3,6 +3,7 @@
 import textwrap
 
 from citegraph.extract.csharp import CSharpExtractor
+from citegraph.extract.names import name_digest
 from citegraph.extract.python import PythonExtractor
 
 CS = textwrap.dedent(
@@ -83,8 +84,8 @@ def test_csharp_send_methods_are_configurable() -> None:
 def test_csharp_string_constants_shaped_like_names() -> None:
     result = CSharpExtractor().extract("Jobs.cs", CS.encode())
     assert [(c.qualified_name, c.value, c.line) for c in result.string_consts] == [
-        ("Shop.Jobs.Tasks.Classify", "classify_stems", 5)
-    ]  # values with spaces or "/" and non-string constants are not stored
+        ("Shop.Jobs.Tasks.Classify", name_digest("classify_stems"), 5)
+    ]  # values with spaces or "/" and non-string constants are not stored; the rest only as digests
 
 
 def test_python_actors_and_sends() -> None:

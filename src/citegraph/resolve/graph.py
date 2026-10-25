@@ -63,6 +63,7 @@ class Graph:
     module_files: dict[str, list[int]] = field(default_factory=lambda: defaultdict(list))
     file_syms: dict[int, dict[str, Sym]] = field(default_factory=lambda: defaultdict(dict))
     imports: dict[int, dict[str, str]] = field(default_factory=lambda: defaultdict(dict))
+    star_imports: dict[int, list[str]] = field(default_factory=lambda: defaultdict(list))  # `from m import *`
     cs_imports: dict[int, CsImports] = field(default_factory=lambda: defaultdict(CsImports))
     cs_global_imports: dict[int, CsImports] = field(default_factory=lambda: defaultdict(CsImports))
 
@@ -97,7 +98,9 @@ def load_graph(store: Store) -> Graph:
         graph.file_syms[sym.file_id][sym.qualified_name] = sym
     for row in store.conn.execute("SELECT file_id, local_name, target FROM imports"):
         file_id, local, target = int(row["file_id"]), str(row["local_name"]), str(row["target"])
-        if graph.file_lang[file_id] != "csharp":
+        if graph.file_lang[file_id] != "csharp" and local == "*":
+            graph.star_imports[file_id].append(target)
+        elif graph.file_lang[file_id] != "csharp":
             graph.imports[file_id][local] = target
         elif local.startswith("*global"):
             rest = local.removeprefix("*global")

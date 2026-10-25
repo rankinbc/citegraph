@@ -9,7 +9,7 @@ import tree_sitter_c_sharp as tscsharp
 from tree_sitter import Language, Node, Parser
 
 from citegraph.extract import csharp_syntax as syn
-from citegraph.extract.names import is_name_shaped
+from citegraph.extract.names import is_name_shaped, name_digest
 from citegraph.models import ConfigKey, EntryPoint, ExtractResult, ImportFact, Reference, StringConst, Symbol
 
 _LANGUAGE = Language(tscsharp.language())
@@ -25,7 +25,6 @@ _TYPE_KINDS: dict[str, Literal["class", "interface"]] = {
 _SCOPES = frozenset({"block", "lambda_expression", "anonymous_method_expression"})
 _SECTION_METHODS = frozenset({"GetSection", "GetRequiredSection"})
 DEFAULT_SEND_METHODS = ("Enqueue", "EnqueueAsync")
-# a const string is kept only when its value looks like a name (a job name), never free text, paths or secrets
 _CONFIG_METHODS = _SECTION_METHODS | {"GetValue"}
 _NOT_CALLS = frozenset({"nameof"})
 
@@ -213,11 +212,11 @@ class _Visitor:
                     continue
                 name_node = declarator.child_by_field_name("name")
                 value = syn.string_value(next((c for c in declarator.named_children if c != name_node), None))
-                if value is not None and is_name_shaped(value):
+                if value is not None and is_name_shaped(value):  # free text and paths are never job names
                     self.result.string_consts.append(
                         StringConst(
                             qualified_name=f"{type_q}.{syn.text(name_node)}",
-                            value=value,
+                            value=name_digest(value),  # never the value: a const may hold a password
                             line=syn.line(declarator),
                         )
                     )
@@ -364,7 +363,9 @@ class _Visitor:
     # --- config reads -----------------------------------------------------------------------------------
 
     def _config_key(self, key: str | None, node: Node, owner: str) -> None:
-        if key:
+        """A key read in code, kept only when each `:` part is name-shaped: a literal that is free text or a value
+        passed where a key belongs is not stored."""
+        if key and all(is_name_shaped(part) for part in key.split(":")):
             self.result.config_keys.append(
                 ConfigKey(key_path=key, line=syn.line(node), origin="code-read", reader_qualified=owner)
             )

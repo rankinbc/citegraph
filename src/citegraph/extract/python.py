@@ -64,6 +64,21 @@ def _string_value(node: Node | None) -> str | None:
     return "".join(_text(c) for c in node.named_children if c.type == "string_content")
 
 
+def _module_strings(root: Node) -> dict[str, str]:
+    """Module-level `NAME = "literal"` (annotated or not) assigned once; a name assigned twice is not a constant."""
+    found: dict[str, str | None] = {}
+    for statement in root.named_children:
+        assignment = statement.named_children[0] if statement.type == "expression_statement" else None
+        if assignment is None or assignment.type != "assignment":
+            continue
+        left = assignment.child_by_field_name("left")
+        if left is None or left.type != "identifier":
+            continue
+        name = _text(left)
+        found[name] = None if name in found else _string_value(assignment.child_by_field_name("right"))
+    return {name: value for name, value in found.items() if value is not None}
+
+
 def _visibility(name: str) -> Literal["public", "private"]:
     return "private" if name.startswith("_") else "public"
 
@@ -73,6 +88,7 @@ class _Visitor:
         self.module = module
         self.package = package
         self.result = ExtractResult()
+        self.strings: dict[str, str] = {}
 
     def run(self, root: Node) -> ExtractResult:
         self.result.symbols.append(
@@ -84,6 +100,7 @@ class _Visitor:
                 line_end=_end_line(root),
             )
         )
+        self.strings = _module_strings(root)
         self._walk(root, self.module, None)
         return self.result
 
@@ -120,7 +137,8 @@ class _Visitor:
             self._walk(node, scope, class_q)
 
     def _queue_handler(self, node: Node, definition: Node, scope: str) -> None:
-        """`@dramatiq.actor(actor_name="x")` or a bare `@actor`: the function handles jobs named x, or its own name."""
+        """`@dramatiq.actor(actor_name="x")` (or `actor_name=X`, a module-level `X = "x"`): the function handles jobs
+        named x. A bare `@actor`, or a name that cannot be read here (an imported constant), means its own name."""
         if definition.type != "function_definition":
             return
         function = _text(definition.child_by_field_name("name"))
@@ -135,7 +153,10 @@ class _Visitor:
             args = expression.child_by_field_name("arguments") if expression.type == "call" else None
             for arg in args.named_children if args is not None else []:
                 if arg.type == "keyword_argument" and _text(arg.child_by_field_name("name")) == "actor_name":
-                    literal = _string_value(arg.child_by_field_name("value"))
+                    value = arg.child_by_field_name("value")
+                    literal = _string_value(value)
+                    if literal is None and value is not None and value.type == "identifier":
+                        literal = self.strings.get(_text(value))
                     name = literal if literal and is_name_shaped(literal) else name
             self.result.queue_handlers.append(
                 QueueHandler(name=name, handler_qualified=f"{scope}.{function}", line=_line(node))
@@ -212,7 +233,7 @@ class _Visitor:
             args = node.child_by_field_name("arguments")
             first = args.named_children[0] if args is not None and args.named_children else None
             key = _string_value(first)
-            if key:
+            if key and is_name_shaped(key):  # a name, never a value passed by mistake
                 self.result.config_keys.append(
                     ConfigKey(key_path=key, line=_line(node), origin="code-read", reader_qualified=scope)
                 )
@@ -255,7 +276,7 @@ class _Visitor:
         if value is None or _dotted(value) not in _ENV_MAPPINGS:
             return
         key = _string_value(node.child_by_field_name("subscript"))
-        if key:
+        if key and is_name_shaped(key):
             self.result.config_keys.append(
                 ConfigKey(key_path=key, line=_line(node), origin="code-read", reader_qualified=scope)
             )
@@ -286,6 +307,9 @@ class _Visitor:
             return
         base = self._from_base(node.child_by_field_name("module_name"))
         if base is None:
+            return
+        if any(c.type == "wildcard_import" for c in node.named_children):  # `from m import *`
+            self._add_import("*", base, line)
             return
         for name_node in node.children_by_field_name("name"):
             if name_node.type == "aliased_import":
