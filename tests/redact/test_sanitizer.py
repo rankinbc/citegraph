@@ -58,12 +58,18 @@ def test_base64_with_slash_is_redacted_as_one_value() -> None:
 
 
 @pytest.mark.parametrize(
-    ("kind", "kept"),
-    [("env-assignment-base64-slash", "SOME_SERVICE_SECRET_KEY="), ("dir-prefixed-base64-slash", "my-app/")],
+    ("kind", "kept", "marker"),
+    [
+        # a secret-named key: the secret-assignment pattern takes the value before the entropy rule
+        ("env-assignment-base64-slash", "SOME_SERVICE_SECRET_KEY=", "secret-assignment"),
+        ("dir-prefixed-base64-slash", "my-app/", "high-entropy"),
+    ],
 )
-def test_base64_with_slash_after_a_key_or_folder_is_redacted_as_one_value(kind: str, kept: str) -> None:
+def test_base64_with_slash_after_a_key_or_folder_is_redacted_as_one_value(
+    kind: str, kept: str, marker: str
+) -> None:
     value = next(c for c in SECRETS if c.kind == kind).value
-    assert sanitize(f"key {value} end") == f"key {kept}<redacted:high-entropy> end"
+    assert sanitize(f"key {value} end") == f"key {kept}<redacted:{marker}> end"
 
 
 def random_base64_with_slash(seed: int, count: int = 2000) -> list[str]:

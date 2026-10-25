@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import json
 import math
 import re
+from bisect import bisect_right
 from collections import Counter
 from dataclasses import dataclass
 from functools import lru_cache
@@ -16,9 +19,20 @@ from citegraph.redact.patterns import (
     ASSIGNMENT,
     BASE64_MIN_CLASS_CHANGE_RATE,
     BUILTIN_PATTERNS,
+    DATA_URI_CONTEXT,
+    DIGEST_BYTES,
+    DOTTED_NAME,
+    ENCODED_TEXT_MIN_SPACES,
+    ENTROPY_EXEMPT_CONTEXT_WINDOW,
     ENTROPY_MIN_LENGTH,
     ENTROPY_THRESHOLD,
     ENTROPY_TOKEN,
+    HASH_CONTEXT,
+    HASH_KEY,
+    HASH_LABELED_TOKEN,
+    HEX,
+    HEX_OR_UUID,
+    ID_KEY,
     IDENTIFIER_CONSONANT_CLUSTER,
     IDENTIFIER_MAX_ACRONYM,
     IDENTIFIER_MAX_NUMBER_RUNS,
@@ -49,7 +63,10 @@ def redaction_fingerprint() -> str:
     """Short hash of every pattern and parameter `sanitize` uses, including the configured extra patterns."""
     payload = json.dumps(
         [
-            [(p.kind, p.regex.pattern, p.regex.flags, p.value_group) for p in BUILTIN_PATTERNS + _extra],
+            [
+                (p.kind, p.regex.pattern, p.regex.flags, p.value_group, p.skip_identifiers)
+                for p in BUILTIN_PATTERNS + _extra
+            ],
             [
                 ENTROPY_TOKEN.pattern,
                 ENTROPY_MIN_LENGTH,
@@ -63,6 +80,17 @@ def redaction_fingerprint() -> str:
                 IDENTIFIER_MAX_WORD,
                 IDENTIFIER_MAX_ACRONYM,
                 IDENTIFIER_CONSONANT_CLUSTER.pattern,
+                ENTROPY_EXEMPT_CONTEXT_WINDOW,
+                DATA_URI_CONTEXT.pattern,
+                HASH_CONTEXT.pattern,
+                HASH_LABELED_TOKEN.pattern,
+                HASH_KEY.pattern,
+                ID_KEY.pattern,
+                HEX_OR_UUID.pattern,
+                HEX.pattern,
+                DIGEST_BYTES,
+                DOTTED_NAME.pattern,
+                ENCODED_TEXT_MIN_SPACES,
             ],
         ]
     )
@@ -140,6 +168,50 @@ def is_base64_shaped(token: str) -> bool:
     return bool(pairs) and changes / len(pairs) >= BASE64_MIN_CLASS_CHANGE_RATE
 
 
+def is_encoded_text(token: str) -> bool:
+    """True when a base64 token decodes to printable UTF-8 text with spaces (patterns.ENCODED_TEXT_MIN_SPACES)."""
+    try:
+        decoded = base64.b64decode(token, validate=True).decode("utf-8")
+    except (binascii.Error, UnicodeDecodeError):
+        return False
+    return decoded.count(" ") >= ENCODED_TEXT_MIN_SPACES and all(
+        ch.isprintable() or ch in "\t\r\n" for ch in decoded
+    )
+
+
+def is_digest_shaped(value: str) -> bool:
+    """True when `value` is hex or standard base64 of a hash-sized value (patterns.DIGEST_BYTES)."""
+    if HEX.fullmatch(value):
+        return len(value) % 2 == 0 and len(value) // 2 in DIGEST_BYTES
+    try:
+        return len(base64.b64decode(value, validate=True)) in DIGEST_BYTES
+    except binascii.Error:
+        return False
+
+
+def _glued_value_is_exempt(token: str) -> bool:
+    """`KEY=value` in one token: a digest under a hash-named key, or a hex or UUID value under an id-named key."""
+    key, sep, value = token.partition("=")
+    if not sep or not key or not value or value.startswith("="):
+        return False
+    if HASH_KEY.search(key):
+        return is_digest_shaped(value)
+    return bool(ID_KEY.search(key)) and bool(HEX_OR_UUID.fullmatch(value))
+
+
+def is_entropy_exempt(text: str, start: int, token: str) -> bool:
+    """True when the ENTROPY_TOKEN match `token` at `start` is encoded data, a digest or an id by its context
+    (see patterns.DATA_URI_CONTEXT), or encoded prose (`is_encoded_text`): the entropy rule skips it."""
+    context = text[max(0, start - ENTROPY_EXEMPT_CONTEXT_WINDOW) : start]
+    if DATA_URI_CONTEXT.search(context):
+        return True
+    if HASH_CONTEXT.search(context) and is_digest_shaped(token):
+        return True
+    if (label := HASH_LABELED_TOKEN.match(token)) and is_digest_shaped(token[label.end() :]):
+        return True
+    return _glued_value_is_exempt(token) or is_encoded_text(token)
+
+
 def _entropy_spans(token: str, start: int) -> list[tuple[int, int]]:
     """High-entropy spans in one ENTROPY_TOKEN match starting at `start`.
 
@@ -205,21 +277,36 @@ def _block_spans(block: list[tuple[int, str]]) -> list[tuple[int, int]]:
 
 
 def find_secrets(text: str) -> list[SecretHit]:
+    """Pattern hits in pattern order, then high-entropy spans; a span overlapping an earlier hit is dropped.
+
+    Kept hits never overlap, so their starts and ends are both sorted: one bisect finds the only kept hit a new
+    span can overlap, and a file with thousands of hits is not quadratic.
+    """
+    starts: list[int] = []
+    ends: list[int] = []
     hits: list[SecretHit] = []
 
-    def overlaps(start: int, end: int) -> bool:
-        return any(start < h.end and h.start < end for h in hits)
+    def keep(kind: str, start: int, end: int) -> None:
+        i = bisect_right(ends, start)  # first kept hit ending after `start`
+        if i < len(starts) and starts[i] < end:
+            return
+        starts.insert(i, start)
+        ends.insert(i, end)
+        hits.insert(i, SecretHit(kind, start, end))
 
     for pattern in BUILTIN_PATTERNS + _extra:
         for match in pattern.regex.finditer(text):
-            start, end = match.span(pattern.value_group)
-            if not overlaps(start, end):
-                hits.append(SecretHit(pattern.kind, start, end))
+            value = match.group(pattern.value_group)
+            if pattern.skip_identifiers and (is_identifier_shaped(value) or DOTTED_NAME.fullmatch(value)):
+                continue
+            keep(pattern.kind, *match.span(pattern.value_group))
     for match in ENTROPY_TOKEN.finditer(text):
-        for start, end in _entropy_spans(match.group(0), match.start()):
-            if not overlaps(start, end):
-                hits.append(SecretHit("high-entropy", start, end))
-    return sorted(hits, key=lambda h: h.start)
+        token = match.group(0)
+        if is_entropy_exempt(text, match.start(), token):
+            continue
+        for start, end in _entropy_spans(token, match.start()):
+            keep("high-entropy", start, end)
+    return hits
 
 
 @lru_cache(maxsize=65536)

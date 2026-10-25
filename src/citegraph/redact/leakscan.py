@@ -2,11 +2,17 @@
 
 SQLite files are scanned cell by cell: SQLite stores adjacent column values back to back, so a raw byte scan
 would join two harmless values into one long mixed token and report a false high-entropy hit.
+
+A file with a UTF-16 byte order mark is decoded as UTF-16. Any other file with a NUL byte in its first 8 KiB is
+binary (git's test) and skipped; other files are read as latin-1, which maps every byte to one character.
 """
 
 from __future__ import annotations
 
+import codecs
+import re
 import sqlite3
+from bisect import bisect_right
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +20,7 @@ from pathlib import Path
 from citegraph.redact.sanitizer import find_secrets
 
 SQLITE_MAGIC = b"SQLite format 3\x00"
+BINARY_SNIFF_BYTES = 8192
 
 
 @dataclass(frozen=True)
@@ -27,7 +34,17 @@ class Finding:
 
 
 def scan_text(text: str, path: str) -> list[Finding]:
-    return [Finding(path, text.count("\n", 0, hit.start) + 1, hit.kind) for hit in find_secrets(text)]
+    newlines = [m.start() for m in re.finditer("\n", text)]
+    return [Finding(path, bisect_right(newlines, hit.start) + 1, hit.kind) for hit in find_secrets(text)]
+
+
+def decode_text(data: bytes) -> str | None:
+    """The text of a file's bytes, or None for a binary file."""
+    if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return data.decode("utf-16", errors="replace")
+    if b"\x00" in data[:BINARY_SNIFF_BYTES]:
+        return None
+    return data.decode("latin-1")
 
 
 def scan_sqlite(path: Path) -> list[Finding]:
@@ -72,7 +89,6 @@ def scan_paths(paths: Iterable[Path]) -> list[Finding]:
         data = file.read_bytes()
         if data.startswith(SQLITE_MAGIC):
             findings.extend(scan_sqlite(file))
-        else:
-            # latin-1 maps every byte to one character, so any binary file scans without errors
-            findings.extend(scan_text(data.decode("latin-1"), str(file)))
+        elif (text := decode_text(data)) is not None:
+            findings.extend(scan_text(text, str(file)))
     return findings

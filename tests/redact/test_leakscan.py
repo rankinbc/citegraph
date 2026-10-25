@@ -15,12 +15,13 @@ def test_finding_reports_location_not_value(tmp_path: Path) -> None:
     assert SECRET not in str(findings[0])
 
 
-def test_scans_directories_and_binary(tmp_path: Path) -> None:
+def test_scans_directories_and_skips_binary(tmp_path: Path) -> None:
     (tmp_path / "sub").mkdir()
     (tmp_path / "sub" / "blob.db").write_bytes(b"\x00\x01" + SECRET.encode() + b"\xff")
+    (tmp_path / "sub" / "notes.txt").write_bytes(b"\x01" + SECRET.encode() + b"\xff")
     (tmp_path / "clean.txt").write_text("nothing here", encoding="utf-8")
     findings = scan_paths([tmp_path])
-    assert [f.kind for f in findings] == ["aws-access-key"]
+    assert findings == [Finding(str(tmp_path / "sub" / "notes.txt"), 1, "aws-access-key")]
 
 
 def test_clean_file_has_no_findings(tmp_path: Path) -> None:
